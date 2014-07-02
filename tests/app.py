@@ -12,9 +12,11 @@ def index():
     }
 
 
-def create_app(config):
+def create_app(config, oidc_overrides=None):
     app = Flask(__name__)
     app.config.update(config)
-    oidc = OpenIDConnect(app)
+    if oidc_overrides is None:
+        oidc_overrides = {}
+    oidc = OpenIDConnect(app, **oidc_overrides)
     app.route('/')(oidc.check(index))
     return app

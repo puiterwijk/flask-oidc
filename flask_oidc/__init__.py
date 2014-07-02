@@ -150,7 +150,7 @@ class OpenIDConnect(object):
                 return False
 
         # step 5
-        if id_token.get('azp') != self.flow.client_id:
+        if 'azp' in id_token and id_token['azp'] != self.flow.client_id:
             return False
 
         # steps 9, 10
