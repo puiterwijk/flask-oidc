@@ -20,10 +20,6 @@ class OpenIDConnect(object):
     @see: https://developers.google.com/api-client-library/python/samples/authorized_api_web_server_calendar.py
     """
     def __init__(self, app=None, credentials_store=None, http=None, time=None, urandom=None):
-        self.app = app
-        if app is not None:
-            self.init_app(app)
-
         # set from app config in .init_app()
         self.flow = None
 
@@ -36,6 +32,11 @@ class OpenIDConnect(object):
         self.credentials_store = credentials_store if credentials_store is not None else MemoryCredentials()
         self.time = time if time is not None else time_module.time
         self.urandom = urandom if urandom is not None else os.urandom
+
+        # get stuff from the app's config, which may override stuff set above
+        self.app = app
+        if app is not None:
+            self.init_app(app)
 
     def init_app(self, app):
         """
@@ -55,8 +56,15 @@ class OpenIDConnect(object):
             redirect_uri=redirect_uri)
         assert isinstance(self.flow, OAuth2WebServerFlow)
 
-        self.google_apps_domain = app.config.get('OIDC_GOOGLE_APPS_DOMAIN')
-        self.session_variable_prefix = app.config.get('OIDC_SESSION_VARIABLE_PREFIX', 'oidc')
+        try:
+            self.google_apps_domain = app.config['OIDC_GOOGLE_APPS_DOMAIN']
+        except KeyError:
+            pass
+
+        try:
+            self.session_variable_prefix = app.config['OIDC_SESSION_VARIABLE_PREFIX']
+        except KeyError:
+            pass
 
         try:
             pass  # TODO: alternate credentials stores from OIDC_CREDENTIALS_STORE
@@ -73,12 +81,15 @@ class OpenIDConnect(object):
             if id_token is None:
                 return self.redirect_to_auth_server(request.url)
 
+            # id_token expired
             if self.time() >= id_token['exp']:
+                # get credentials from store
                 try:
                     credentials = self.credentials_store[id_token['sub']]
                 except KeyError:
                     return self.redirect_to_auth_server(request.url)
 
+                # refresh and store credentials
                 try:
                     credentials.refresh(self.http)
                     id_token = credentials.id_token
