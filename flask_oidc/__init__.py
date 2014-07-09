@@ -8,6 +8,7 @@ import time as time_module
 from flask import request, session, redirect, url_for
 from oauth2client.client import flow_from_clientsecrets, OAuth2WebServerFlow, AccessTokenRefreshError
 import httplib2
+from itsdangerous import TimedJSONWebSignatureSerializer, SignatureExpired
 
 
 class MemoryCredentials(dict):
@@ -22,10 +23,13 @@ class OpenIDConnect(object):
     def __init__(self, app=None, credentials_store=None, http=None, time=None, urandom=None):
         # set from app config in .init_app()
         self.flow = None
+        self.cookie_serializer = None
 
         # optional, also set from app config
         self.google_apps_domain = None
         self.session_variable_prefix = 'oidc'
+        self.id_token_cookie_name = 'oidc_id_token'
+        self.id_token_cookie_ttl = 7 * 86400  # one week
 
         # stuff that we might want to override for tests
         self.http = http if http is not None else httplib2.Http()
@@ -56,6 +60,9 @@ class OpenIDConnect(object):
             redirect_uri=redirect_uri)
         assert isinstance(self.flow, OAuth2WebServerFlow)
 
+        # create a cookie signer using the Flask secret key
+        self.cookie_serializer = TimedJSONWebSignatureSerializer(app.config['SECRET_KEY'])
+
         try:
             self.google_apps_domain = app.config['OIDC_GOOGLE_APPS_DOMAIN']
         except KeyError:
@@ -63,6 +70,16 @@ class OpenIDConnect(object):
 
         try:
             self.session_variable_prefix = app.config['OIDC_SESSION_VARIABLE_PREFIX']
+        except KeyError:
+            pass
+
+        try:
+            self.id_token_cookie_name = app.config['OIDC_ID_TOKEN_COOKIE_NAME']
+        except KeyError:
+            pass
+
+        try:
+            self.id_token_cookie_ttl = app.config['OIDC_ID_TOKEN_COOKIE_TTL']
         except KeyError:
             pass
 
@@ -77,8 +94,11 @@ class OpenIDConnect(object):
     def check(self, view_func):
         @wraps(view_func)
         def decorated(*args, **kwargs):
-            id_token = session.get(self.s_pfx('id_token'))
-            if id_token is None:
+            # retrieve signed ID token cookie
+            try:
+                id_token_cookie = request.cookies[self.id_token_cookie_name]
+                id_token = self.cookie_serializer.loads(id_token_cookie)
+            except (KeyError, SignatureExpired):
                 return self.redirect_to_auth_server(request.url)
 
             # id_token expired
@@ -157,7 +177,7 @@ class OpenIDConnect(object):
         if not (id_token['iat'] <= self.time() < id_token['exp']):
             return False
 
-        # TODO: step 11: check nonce
+        # (not required if using HTTPS?) step 11: check nonce
 
         # additional steps specific to our usage
 
@@ -174,6 +194,7 @@ class OpenIDConnect(object):
         Exchange the auth code for actual credentials,
         then redirect to the originally requested page.
         """
+        # retrieve session and callback variables
         try:
             session_csrf_token = session.pop(self.s_pfx('csrf_token'))
 
@@ -185,17 +206,25 @@ class OpenIDConnect(object):
         except (KeyError, ValueError):
             return self.not_authorized
 
+        # check callback CSRF token passed to IdP against session CSRF token held by user
         if csrf_token != session_csrf_token:
             return self.not_authorized
 
+        # make a request to IdP to exchange the auth code for OAuth credentials
         credentials = self.flow.step2_exchange(code, http=self.http)
         id_token = credentials.id_token
         if not self.is_id_token_valid(id_token):
             return self.not_authorized
 
+        # store credentials by subject
+        # when Google is the IdP, the subject is their G+ account number
         self.credentials_store[id_token['sub']] = credentials
-        # TODO: set the id_token as a persistent cookie, not a session cookie
-        session[self.s_pfx('id_token')] = id_token
 
+        # set a persistent signed cookie containing the ID token
+        # and redirect to the final destination
         # TODO: validate redirect destination
-        return redirect(destination)
+        response = redirect(destination)
+        signed_id_token = self.cookie_serializer.dumps(id_token)
+        response.set_cookie(self.id_token_cookie_name, signed_id_token,
+                            secure=True, httponly=True, max_age=self.id_token_cookie_ttl)
+        return response
