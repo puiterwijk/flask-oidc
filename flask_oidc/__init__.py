@@ -102,6 +102,7 @@ class OpenIDConnect(object):
                 return self.redirect_to_auth_server(request.url)
 
             # id_token expired
+            # when Google is the IdP, this happens after one hour
             if self.time() >= id_token['exp']:
                 # get credentials from store
                 try:
@@ -123,7 +124,7 @@ class OpenIDConnect(object):
         return decorated
 
     def redirect_to_auth_server(self, destination):
-        csrf_token = b64encode(os.urandom(24))
+        csrf_token = b64encode(self.urandom(24))
         session[self.s_pfx('csrf_token')] = csrf_token
         state = {
             'csrf_token': csrf_token,
