@@ -59,7 +59,7 @@ def test_signin():
     state = query['state'][0]
 
     # the app should now contact the IdP to exchange that auth code for credentials
-    r2 = test_client.get('/oauth2callback?' + urlencode({'state': state, 'code': 'mock_auth_code'}))
+    r2 = test_client.get('/oidc_callback?' + urlencode({'state': state, 'code': 'mock_auth_code'}))
     assert r2.status_code == 302,\
         "Expected redirect to destination (response status was {response.status})".format(response=r2)
     r2location = urlsplit(r2.headers['Location'])
