@@ -37,7 +37,6 @@ class MockHttp(object):
 app = create_app({
     'SECRET_KEY': 'SEEEKRIT',
     'TESTING': True,
-    'SERVER_NAME': 'localhost',
     'OIDC_CLIENT_SECRETS': resource_filename(__name__, 'client_secrets.json'),
 }, {
     'http': MockHttp(),
@@ -63,7 +62,5 @@ def test_signin():
     assert r2.status_code == 302,\
         "Expected redirect to destination (response status was {response.status})".format(response=r2)
     r2location = urlsplit(r2.headers['Location'])
-    assert r2location.netloc == app.config['SERVER_NAME'],\
-        "Expected redirect to destination (unexpected netloc {location.netloc})".format(location=r2location)
     assert r2location.path == '/',\
         "Expected redirect to destination (unexpected path {location.path})".format(location=r2location)
