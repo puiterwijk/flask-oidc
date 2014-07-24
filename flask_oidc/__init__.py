@@ -55,9 +55,8 @@ class OpenIDConnect(object):
         """
         Do setup that requires a Flask app.
         """
-        # register callback and error routes, and cookie-setting decorator
+        # register callback route and cookie-setting decorator
         app.route('/oidc_callback')(self.oidc_callback)
-        app.route('/oidc_error')(self.oidc_error)
         app.after_request(self.after_request)
 
         # load client_secrets.json
@@ -201,9 +200,6 @@ class OpenIDConnect(object):
         extra_params = {
             'state': json.dumps(state),
         }
-        if self.google_apps_domain is not None:
-            extra_params['hd'] = self.google_apps_domain
-
         flow = self.flow_for_request()
         auth_url = '{url}&{extra_params}'.format(
             url=flow.step1_get_authorize_url(),
@@ -256,13 +252,13 @@ class OpenIDConnect(object):
 
         return True
 
+    WRONG_GOOGLE_APPS_DOMAIN = 'WRONG_GOOGLE_APPS_DOMAIN'
+
     def oidc_callback(self):
         """
         Exchange the auth code for actual credentials,
         then redirect to the originally requested page.
         """
-        not_authorized = redirect(url_for('oidc_error'))
-
         # retrieve session and callback variables
         try:
             session_csrf_token = session.pop('oidc_csrf_token')
@@ -274,12 +270,12 @@ class OpenIDConnect(object):
             code = request.args['code']
         except (KeyError, ValueError):
             logger.debug("Can't retrieve CSRF token, state, or code", exc_info=True)
-            return not_authorized
+            return self.oidc_error()
 
         # check callback CSRF token passed to IdP against session CSRF token held by user
         if csrf_token != session_csrf_token:
             logger.debug("CSRF token mismatch")
-            return not_authorized
+            return self.oidc_error()
 
         # make a request to IdP to exchange the auth code for OAuth credentials
         flow = self.flow_for_request()
@@ -287,7 +283,11 @@ class OpenIDConnect(object):
         id_token = credentials.id_token
         if not self.is_id_token_valid(id_token):
             logger.debug("Invalid ID token")
-            return not_authorized
+            if id_token.get('hd') != self.google_apps_domain:
+                return self.oidc_error(
+                    "You must log in with an account from the {} domain.".format(self.google_apps_domain),
+                    self.WRONG_GOOGLE_APPS_DOMAIN)
+            return self.oidc_error()
 
         # store credentials by subject
         # when Google is the IdP, the subject is their G+ account number
@@ -300,7 +300,7 @@ class OpenIDConnect(object):
         self.set_cookie_id_token(id_token)
         return response
 
-    def oidc_error(self):
-        return ('Not Authorized', 401, {
+    def oidc_error(self, message='Not Authorized', code=None):
+        return (message, 401, {
             'Content-Type': 'text/plain',
         })
