@@ -4,7 +4,7 @@ from pip.req import parse_requirements
 setup(
     name='flask-oidc',
     description='OpenID Connect extension for Flask',
-    version='0.0.0',
+    version='0.1.0',
     packages=[
         'flask_oidc',
     ],
