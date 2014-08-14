@@ -47,7 +47,6 @@ class OpenIDConnect(object):
         self.urandom = urandom if urandom is not None else os.urandom
 
         # get stuff from the app's config, which may override stuff set above
-        self.app = app
         if app is not None:
             self.init_app(app)
 
@@ -89,7 +88,7 @@ class OpenIDConnect(object):
             pass
 
         try:
-            pass  # TODO: alternate credentials stores from OIDC_CREDENTIALS_STORE
+            self.credentials_store = app.config['OIDC_CREDENTIALS_STORE']
         except KeyError:
             pass
 
