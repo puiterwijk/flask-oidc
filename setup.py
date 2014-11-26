@@ -7,7 +7,7 @@ setup(
     url='https://github.com/SteelPangolin/flask-oidc',
     author='Jeremy Ehrhardt',
     author_email='jeremy@bat-country.us',
-    version='0.1.0',
+    version='0.1.1',
     packages=[
         'flask_oidc',
     ],

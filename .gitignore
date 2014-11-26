@@ -5,3 +5,4 @@ venv
 coverage
 *.egg-info
 dist
+*.pyc
