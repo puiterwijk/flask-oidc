@@ -1,16 +1,16 @@
 from pkg_resources import resource_filename, resource_stream
-from urlparse import urlsplit, parse_qs
-from urllib import urlencode
 import json
+import codecs
 from base64 import urlsafe_b64encode
 
+from six.moves.urllib.parse import urlsplit, parse_qs, urlencode
 from nose.tools import nottest
 
 from .app import create_app
 
 
 with resource_stream(__name__, 'client_secrets.json') as f:
-    client_secrets = json.load(f)
+    client_secrets = json.load(codecs.getreader('utf-8')(f))
 
 
 class Clock(object):
@@ -50,8 +50,8 @@ class MockHttp(object):
                 'email_verified': True,
                 'iat': self.iat,
                 'exp': self.exp,
-            }))),
-        })
+            }).encode('utf-8')).decode('utf-8')),
+        }).encode('utf-8')
 
 
 @nottest
@@ -118,7 +118,7 @@ def test_refresh():
     auth_redirect = test_client.get('/')
     callback_redirect = test_client.get(callback_url_for(auth_redirect))
     actual_page = test_client.get(callback_redirect.headers['Location'])
-    assert ''.join(actual_page.response) == 'too many secrets', "Authentication failed"
+    assert ''.join(codecs.iterdecode(actual_page.response, 'utf-8')) == 'too many secrets', "Authentication failed"
 
     # expire the ID token cookie
     clock.now = 5

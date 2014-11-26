@@ -1,12 +1,12 @@
 from functools import wraps
 import os
 import json
-from urllib import urlencode
 from base64 import b64encode
 import time as time_module
 from copy import copy
 import logging
 
+from six.moves.urllib.parse import urlencode
 from flask import request, session, redirect, url_for, g
 from oauth2client.client import flow_from_clientsecrets, OAuth2WebServerFlow, AccessTokenRefreshError
 import httplib2
@@ -190,7 +190,7 @@ class OpenIDConnect(object):
         :param destination: the page that the user was going to, before we noticed they weren't logged in
         :return: a redirect response
         """
-        csrf_token = b64encode(self.urandom(24))
+        csrf_token = b64encode(self.urandom(24)).decode('utf-8')
         session['oidc_csrf_token'] = csrf_token
         state = {
             'csrf_token': csrf_token,
