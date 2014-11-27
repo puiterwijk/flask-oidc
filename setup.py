@@ -1,9 +1,17 @@
+import os.path
+import io
+
 from setuptools import setup
 from pip.req import parse_requirements
+
+here = os.path.abspath(os.path.dirname(__file__))
+with io.open(os.path.join(here, 'README.rst')) as f:
+    readme = f.read()
 
 setup(
     name='flask-oidc',
     description='OpenID Connect extension for Flask',
+    long_description=readme,
     url='https://github.com/SteelPangolin/flask-oidc',
     author='Jeremy Ehrhardt',
     author_email='jeremy@bat-country.us',
