@@ -139,7 +139,7 @@ class OpenIDConnect(object):
         :return: A redirect, or None if the user is authenticated.
         """
         # the auth callback and error pages don't need user to be authenticated
-        if request.endpoint in {'oidc_callback', 'oidc_error'}:
+        if request.endpoint in frozenset(['oidc_callback', 'oidc_error']):
             return None
 
         # retrieve signed ID token cookie
