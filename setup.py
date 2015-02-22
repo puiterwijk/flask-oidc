@@ -2,7 +2,6 @@ import os.path
 import io
 
 from setuptools import setup
-from pip.req import parse_requirements
 
 here = os.path.abspath(os.path.dirname(__file__))
 with io.open(os.path.join(here, 'README.rst')) as f:
@@ -15,11 +14,16 @@ setup(
     url='https://github.com/SteelPangolin/flask-oidc',
     author='Jeremy Ehrhardt',
     author_email='jeremy@bat-country.us',
-    version='0.1.1',
+    version='0.1.2',
     packages=[
         'flask_oidc',
     ],
-    install_requires=[str(req.req) for req in parse_requirements('requirements.txt')],
+    install_requires=[
+        'Flask',
+        'itsdangerous',
+        'oauth2client',
+        'six',
+    ],
     zip_safe=False,
     classifiers=[
         'Environment :: Web Environment',
@@ -29,8 +33,11 @@ setup(
         'Operating System :: OS Independent',
         'Programming Language :: Python',
         'Programming Language :: Python :: 2',
+        'Programming Language :: Python :: 2.6',
         'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3',
+        'Programming Language :: Python :: 3.2',
+        'Programming Language :: Python :: 3.3',
         'Programming Language :: Python :: 3.4',
         'Topic :: Internet :: WWW/HTTP :: Dynamic Content',
         'Topic :: Software Development :: Libraries :: Python Modules'
