@@ -31,7 +31,8 @@ class MockHttpResponse(object):
 class MockHttp(object):
     """
     Mock httplib2 client.
-    Assumes all requests are auth code exchanges that return OAuth access/ID tokens.
+    Assumes all requests are auth code exchanges
+    that return OAuth access/ID tokens.
     """
     def __init__(self, iat, exp):
         self.iat = iat
@@ -66,7 +67,8 @@ def make_test_client():
     app = create_app({
         'SECRET_KEY': 'SEEEKRIT',
         'TESTING': True,
-        'OIDC_CLIENT_SECRETS': resource_filename(__name__, 'client_secrets.json'),
+        'OIDC_CLIENT_SECRETS':
+            resource_filename(__name__, 'client_secrets.json'),
     }, {
         'http': http,
         'time': clock.time,
@@ -84,7 +86,8 @@ def callback_url_for(response):
     location = urlsplit(response.headers['Location'])
     query = parse_qs(location.query)
     state = query['state'][0]
-    callback_url = '/oidc_callback?' + urlencode({'state': state, 'code': 'mock_auth_code'})
+    callback_url = '/oidc_callback?'\
+                   + urlencode({'state': state, 'code': 'mock_auth_code'})
     return callback_url
 
 
@@ -94,18 +97,23 @@ def test_signin():
     """
     test_client, _, _ = make_test_client()
 
-    # make an unauthenticated request, which should result in a redirect to the IdP
+    # make an unauthenticated request,
+    # which should result in a redirect to the IdP
     r1 = test_client.get('/')
     assert r1.status_code == 302,\
-        "Expected redirect to IdP (response status was {response.status})".format(response=r1)
+        "Expected redirect to IdP "\
+        "(response status was {response.status})".format(response=r1)
 
-    # the app should now contact the IdP to exchange that auth code for credentials
+    # the app should now contact the IdP
+    # to exchange that auth code for credentials
     r2 = test_client.get(callback_url_for(r1))
     assert r2.status_code == 302,\
-        "Expected redirect to destination (response status was {response.status})".format(response=r2)
+        "Expected redirect to destination "\
+        "(response status was {response.status})".format(response=r2)
     r2location = urlsplit(r2.headers['Location'])
     assert r2location.path == '/',\
-        "Expected redirect to destination (unexpected path {location.path})".format(location=r2location)
+        "Expected redirect to destination "\
+        "(unexpected path {location.path})".format(location=r2location)
 
 
 def test_refresh():
@@ -118,7 +126,8 @@ def test_refresh():
     auth_redirect = test_client.get('/')
     callback_redirect = test_client.get(callback_url_for(auth_redirect))
     actual_page = test_client.get(callback_redirect.headers['Location'])
-    assert ''.join(codecs.iterdecode(actual_page.response, 'utf-8')) == 'too many secrets', "Authentication failed"
+    page_text = ''.join(codecs.iterdecode(actual_page.response, 'utf-8'))
+    assert page_text == 'too many secrets', "Authentication failed"
 
     # expire the ID token cookie
     clock.now = 5
@@ -126,4 +135,5 @@ def test_refresh():
     # app should now try to use the refresh token
     test_client.get('/')
     body = parse_qs(http.last_request['body'])
-    assert body.get('refresh_token') == ['mock_refresh_token'], "App should have tried to refresh credentials"
+    assert body.get('refresh_token') == ['mock_refresh_token'],\
+        "App should have tried to refresh credentials"

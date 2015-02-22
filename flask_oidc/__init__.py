@@ -8,9 +8,12 @@ import logging
 
 from six.moves.urllib.parse import urlencode
 from flask import request, session, redirect, url_for, g
-from oauth2client.client import flow_from_clientsecrets, OAuth2WebServerFlow, AccessTokenRefreshError
+from oauth2client.client import flow_from_clientsecrets, OAuth2WebServerFlow,\
+    AccessTokenRefreshError
 import httplib2
 from itsdangerous import TimedJSONWebSignatureSerializer, SignatureExpired
+
+__all__ = ['OpenIDConnect', 'MemoryCredentials']
 
 logger = logging.getLogger(__name__)
 
@@ -18,7 +21,8 @@ logger = logging.getLogger(__name__)
 class MemoryCredentials(dict):
     """
     Non-persistent local credentials store.
-    Use this if you only have one app server, and don't mind making everyone log in again after a restart.
+    Use this if you only have one app server, and don't mind making everyone
+    log in again after a restart.
     """
     pass
 
@@ -28,7 +32,8 @@ class OpenIDConnect(object):
     @see: https://developers.google.com/api-client-library/python/start/get_started
     @see: https://developers.google.com/api-client-library/python/samples/authorized_api_web_server_calendar.py
     """
-    def __init__(self, app=None, credentials_store=None, http=None, time=None, urandom=None):
+    def __init__(self, app=None, credentials_store=None, http=None, time=None,
+                 urandom=None):
         # set from app config in .init_app()
         self.callback_path = None
         self.flow = None
@@ -38,11 +43,14 @@ class OpenIDConnect(object):
         self.google_apps_domain = None
         self.id_token_cookie_name = 'oidc_id_token'
         self.id_token_cookie_ttl = 7 * 86400  # one week
-        self.id_token_cookie_secure = True  # should ONLY be turned off for local debugging
+        # should ONLY be turned off for local debugging
+        self.id_token_cookie_secure = True
 
         # stuff that we might want to override for tests
         self.http = http if http is not None else httplib2.Http()
-        self.credentials_store = credentials_store if credentials_store is not None else MemoryCredentials()
+        self.credentials_store = credentials_store\
+            if credentials_store is not None\
+            else MemoryCredentials()
         self.time = time if time is not None else time_module.time
         self.urandom = urandom if urandom is not None else os.urandom
 
@@ -65,7 +73,8 @@ class OpenIDConnect(object):
         assert isinstance(self.flow, OAuth2WebServerFlow)
 
         # create a cookie signer using the Flask secret key
-        self.cookie_serializer = TimedJSONWebSignatureSerializer(app.config['SECRET_KEY'])
+        self.cookie_serializer = TimedJSONWebSignatureSerializer(
+            app.config['SECRET_KEY'])
 
         try:
             self.google_apps_domain = app.config['OIDC_GOOGLE_APPS_DOMAIN']
@@ -83,7 +92,8 @@ class OpenIDConnect(object):
             pass
 
         try:
-            self.id_token_cookie_secure = app.config['OIDC_ID_TOKEN_COOKIE_SECURE']
+            self.id_token_cookie_secure =\
+                app.config['OIDC_ID_TOKEN_COOKIE_SECURE']
         except KeyError:
             pass
 
@@ -123,11 +133,12 @@ class OpenIDConnect(object):
     def authenticate_or_redirect(self):
         """
         Helper function suitable for @app.before_request and @check (below).
-        Sets g.oidc_id_token to the ID token if the user has successfully authenticated,
-        else returns a redirect object so they can go try to authenticate.
+        Sets g.oidc_id_token to the ID token if the user has successfully
+        authenticated, else returns a redirect object so they can go try
+        to authenticate.
         :return: A redirect, or None if the user is authenticated.
         """
-        # the auth callback and error pages don't need the user to be authenticated
+        # the auth callback and error pages don't need user to be authenticated
         if request.endpoint in {'oidc_callback', 'oidc_error'}:
             return None
 
@@ -143,7 +154,8 @@ class OpenIDConnect(object):
             try:
                 credentials = self.credentials_store[id_token['sub']]
             except KeyError:
-                logger.debug("Expired ID token, credentials missing", exc_info=True)
+                logger.debug("Expired ID token, credentials missing",
+                             exc_info=True)
                 return self.redirect_to_auth_server(request.url)
 
             # refresh and store credentials
@@ -153,8 +165,10 @@ class OpenIDConnect(object):
                 self.credentials_store[id_token['sub']] = credentials
                 self.set_cookie_id_token(id_token)
             except AccessTokenRefreshError:
-                # Can't refresh. Wipe credentials and redirect user to IdP for re-authentication.
-                logger.debug("Expired ID token, can't refresh credentials", exc_info=True)
+                # Can't refresh. Wipe credentials and redirect user to IdP
+                # for re-authentication.
+                logger.debug("Expired ID token, can't refresh credentials",
+                             exc_info=True)
                 del self.credentials_store[id_token['sub']]
                 return self.redirect_to_auth_server(request.url)
 
@@ -165,7 +179,8 @@ class OpenIDConnect(object):
 
     def check(self, view_func):
         """
-        Use this to decorate view functions if only some of your app's views require authentication.
+        Use this to decorate view functions if only some of your app's views
+        require authentication.
         """
         @wraps(view_func)
         def decorated(*args, **kwargs):
@@ -187,7 +202,8 @@ class OpenIDConnect(object):
     def redirect_to_auth_server(self, destination):
         """
         Set a CSRF token in the session, and redirect to the IdP.
-        :param destination: the page that the user was going to, before we noticed they weren't logged in
+        :param destination: the page that the user was going to,
+                            before we noticed they weren't logged in
         :return: a redirect response
         """
         csrf_token = b64encode(self.urandom(24)).decode('utf-8')
@@ -203,7 +219,8 @@ class OpenIDConnect(object):
         auth_url = '{url}&{extra_params}'.format(
             url=flow.step1_get_authorize_url(),
             extra_params=urlencode(extra_params))
-        self.set_cookie_id_token(None)  # if the user has an ID token, it's invalid, or we wouldn't be here
+        # if the user has an ID token, it's invalid, or we wouldn't be here
+        self.set_cookie_id_token(None)
         return redirect(auth_url)
 
     def is_id_token_valid(self, id_token):
@@ -268,10 +285,12 @@ class OpenIDConnect(object):
 
             code = request.args['code']
         except (KeyError, ValueError):
-            logger.debug("Can't retrieve CSRF token, state, or code", exc_info=True)
+            logger.debug("Can't retrieve CSRF token, state, or code",
+                         exc_info=True)
             return self.oidc_error()
 
-        # check callback CSRF token passed to IdP against session CSRF token held by user
+        # check callback CSRF token passed to IdP
+        # against session CSRF token held by user
         if csrf_token != session_csrf_token:
             logger.debug("CSRF token mismatch")
             return self.oidc_error()
@@ -284,7 +303,8 @@ class OpenIDConnect(object):
             logger.debug("Invalid ID token")
             if id_token.get('hd') != self.google_apps_domain:
                 return self.oidc_error(
-                    "You must log in with an account from the {} domain.".format(self.google_apps_domain),
+                    "You must log in with an account from the {0} domain."
+                    .format(self.google_apps_domain),
                     self.WRONG_GOOGLE_APPS_DOMAIN)
             return self.oidc_error()
 
