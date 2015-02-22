@@ -6,7 +6,7 @@ Change Log
 
 2015-02-22
 
-* Supports Python 2.6, 2.7, 3.2, 3.3, and 3.4.
+* Supports Python 2.6, 2.7, 3.3, and 3.4.
 * Now using Travis CI.
 
 0.1.1
