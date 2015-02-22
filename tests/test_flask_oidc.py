@@ -45,7 +45,7 @@ class MockHttp(object):
         return MockHttpResponse(), json.dumps({
             'access_token': 'mock_access_token',
             'refresh_token': 'mock_refresh_token',
-            'id_token': '.{}.'.format(urlsafe_b64encode(json.dumps({
+            'id_token': '.{0}.'.format(urlsafe_b64encode(json.dumps({
                 'aud': client_secrets['web']['client_id'],
                 'sub': 'mock_user_id',
                 'email_verified': True,
@@ -67,8 +67,8 @@ def make_test_client():
     app = create_app({
         'SECRET_KEY': 'SEEEKRIT',
         'TESTING': True,
-        'OIDC_CLIENT_SECRETS':
-            resource_filename(__name__, 'client_secrets.json'),
+        'OIDC_CLIENT_SECRETS': resource_filename(
+            __name__, 'client_secrets.json'),
     }, {
         'http': http,
         'time': clock.time,
