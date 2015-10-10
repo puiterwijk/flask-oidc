@@ -21,3 +21,5 @@ Project status
 ==============
 
 I hope this library has been helpful to anyone who had to scramble to port their Flask apps from `flask-openid <https://pythonhosted.org/Flask-OpenID/>`_ when `Google turned off their OpenID 2.0 support <https://developers.google.com/identity/protocols/OpenID2Migration?hl=en>`_. However, I'm not maintaining it any more, because I'm not currently using it for anything. If you are, either try `danring's fork of this library <https://github.com/danring/flask-oidc>`_, or `Google's oauth2client.flask_util <https://github.com/google/oauth2client/blob/master/oauth2client/flask_util.py>`_.
+
+Also, if you are maintaining a fork of this library, and would like to take over the PyPI package, contact me here.
