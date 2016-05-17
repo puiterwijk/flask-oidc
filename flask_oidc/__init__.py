@@ -34,17 +34,9 @@ class OpenIDConnect(object):
     """
     def __init__(self, app=None, credentials_store=None, http=None, time=None,
                  urandom=None):
-        # set from app config in .init_app()
-        self.callback_path = None
-        self.flow = None
-        self.cookie_serializer = None
-
         self.credentials_store = credentials_store\
             if credentials_store is not None\
             else MemoryCredentials()
-
-        # should ONLY be turned off for local debugging
-        self.id_token_cookie_secure = True
 
         # stuff that we might want to override for tests
         self.http = http if http is not None else httplib2.Http()
@@ -89,6 +81,7 @@ class OpenIDConnect(object):
         self.google_apps_domain = app.config['OIDC_GOOGLE_APPS_DOMAIN']
         self.id_token_cookie_name = app.config['OIDC_ID_TOKEN_COOKIE_NAME']
         self.id_token_cookie_ttl = app.config['OIDC_ID_TOKEN_COOKIE_TTL']
+        # should ONLY be turned off for local debugging
         self.id_token_cookie_secure = app.config['OIDC_ID_TOKEN_COOKIE_SECURE']
         self.id_token_issuers = app.config['OIDC_VALID_ISSUERS']
         self.allowed_clock_skew = app.config['OIDC_CLOCK_SKEW']
