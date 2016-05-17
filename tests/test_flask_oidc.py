@@ -51,6 +51,7 @@ class MockHttp(object):
                 'email_verified': True,
                 'iat': self.iat,
                 'exp': self.exp,
+                'iss': 'accounts.google.com',
             }).encode('utf-8')).decode('utf-8')),
         }).encode('utf-8')
 
