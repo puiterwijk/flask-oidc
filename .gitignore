@@ -1,5 +1,6 @@
 venv
 /client_secrets.json
+/docs/_build
 .idea
 .coverage
 coverage
