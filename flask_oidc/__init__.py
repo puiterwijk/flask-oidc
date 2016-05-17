@@ -68,6 +68,8 @@ class OpenIDConnect(object):
         app.config.setdefault('OIDC_VALID_ISSUERS',
                               ['accounts.google.com',
                                'https://accounts.google.com'])
+        app.config.setdefault('OIDC_CLOCK_SKEW', 60)  # 1 minute
+        app.config.setdefault('OIDC_REQUIRE_VERIFIED_EMAIL', True)
 
         # register callback route and cookie-setting decorator
         app.route('/oidc_callback')(self.oidc_callback)
@@ -89,6 +91,8 @@ class OpenIDConnect(object):
         self.id_token_cookie_ttl = app.config['OIDC_ID_TOKEN_COOKIE_TTL']
         self.id_token_cookie_secure = app.config['OIDC_ID_TOKEN_COOKIE_SECURE']
         self.id_token_issuers = app.config['OIDC_VALID_ISSUERS']
+        self.allowed_clock_skew = app.config['OIDC_CLOCK_SKEW']
+        self.require_verified_email = app.config['OIDC_REQUIRE_VERIFIED_EMAIL']
 
 
         try:
@@ -242,31 +246,48 @@ class OpenIDConnect(object):
         if isinstance(id_token['aud'], list):
             # step 3 for audience list
             if self.flow.client_id not in id_token['aud']:
+                logger.error('We are not a valid audience')
                 return False
             # step 4
             if 'azp' not in id_token:
+                logger.error('Multiple audiences and not authorized party')
                 return False
         else:
             # step 3 for single audience
             if id_token['aud'] != self.flow.client_id:
+                logger.error('We are not the audience')
                 return False
 
         # step 5
         if 'azp' in id_token and id_token['azp'] != self.flow.client_id:
+            logger.error('Authorized Party is not us')
             return False
 
-        # steps 9, 10
-        if not (id_token['iat'] <= self.time() < id_token['exp']):
+        # step 6-8: TLS checked
+
+        # if not (id_token['iat'] <= self.time() < id_token['exp']):
+
+        # step 9: check exp
+        if int(self.time()) >= int(id_token['exp']):
+            logger.error('Token has expired')
+            return False
+
+        # step 10: check iat
+        if id_token['iat'] < (self.time() - self.allowed_clock_skew):
+            logger.error('Token issued in the past')
             return False
 
         # (not required if using HTTPS?) step 11: check nonce
 
-        # additional steps specific to our usage
+        # step 12-13: not requested acr or auth_time, so not needed to test
 
+        # additional steps specific to our usage
         if id_token.get('hd') != self.google_apps_domain:
+            logger.error('Invalid google apps domain')
             return False
 
-        if not id_token['email_verified']:
+        if not id_token['email_verified'] and self.require_verified_email:
+            logger.error('Email not verified')
             return False
 
         return True
