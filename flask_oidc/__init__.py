@@ -265,8 +265,6 @@ class OpenIDConnect(object):
 
         # step 6-8: TLS checked
 
-        # if not (id_token['iat'] <= self.time() < id_token['exp']):
-
         # step 9: check exp
         if int(self.time()) >= int(id_token['exp']):
             logger.error('Token has expired')
