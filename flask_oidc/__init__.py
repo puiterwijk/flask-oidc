@@ -39,18 +39,15 @@ class OpenIDConnect(object):
         self.flow = None
         self.cookie_serializer = None
 
-        # optional, also set from app config
-        self.google_apps_domain = None
-        self.id_token_cookie_name = 'oidc_id_token'
-        self.id_token_cookie_ttl = 7 * 86400  # one week
+        self.credentials_store = credentials_store\
+            if credentials_store is not None\
+            else MemoryCredentials()
+
         # should ONLY be turned off for local debugging
         self.id_token_cookie_secure = True
 
         # stuff that we might want to override for tests
         self.http = http if http is not None else httplib2.Http()
-        self.credentials_store = credentials_store\
-            if credentials_store is not None\
-            else MemoryCredentials()
         self.time = time if time is not None else time_module.time
         self.urandom = urandom if urandom is not None else os.urandom
 
@@ -62,6 +59,16 @@ class OpenIDConnect(object):
         """
         Do setup that requires a Flask app.
         """
+        # Set some default configuration options
+        app.config.setdefault('OIDC_SCOPES', ['openid', 'email'])
+        app.config.setdefault('OIDC_GOOGLE_APPS_DOMAIN', None)
+        app.config.setdefault('OIDC_ID_TOKEN_COOKIE_NAME', 'oidc_id_token')
+        app.config.setdefault('OIDC_ID_TOKEN_COOKIE_TTL', 7 * 86400)  # 7 days
+        app.config.setdefault('OIDC_ID_TOKEN_COOKIE_SECURE', True)
+        app.config.setdefault('OIDC_VALID_ISSUERS',
+                              ['accounts.google.com',
+                               'https://accounts.google.com'])
+
         # register callback route and cookie-setting decorator
         app.route('/oidc_callback')(self.oidc_callback)
         app.after_request(self.after_request)
@@ -69,33 +76,19 @@ class OpenIDConnect(object):
         # load client_secrets.json
         self.flow = flow_from_clientsecrets(
             app.config['OIDC_CLIENT_SECRETS'],
-            scope=['openid', 'email'])
+            scope=app.config['OIDC_SCOPES'])
         assert isinstance(self.flow, OAuth2WebServerFlow)
 
         # create a cookie signer using the Flask secret key
         self.cookie_serializer = TimedJSONWebSignatureSerializer(
             app.config['SECRET_KEY'])
 
-        try:
-            self.google_apps_domain = app.config['OIDC_GOOGLE_APPS_DOMAIN']
-        except KeyError:
-            pass
+        self.google_apps_domain = app.config['OIDC_GOOGLE_APPS_DOMAIN']
+        self.id_token_cookie_name = app.config['OIDC_ID_TOKEN_COOKIE_NAME']
+        self.id_token_cookie_ttl = app.config['OIDC_ID_TOKEN_COOKIE_TTL']
+        self.id_token_cookie_secure = app.config['OIDC_ID_TOKEN_COOKIE_SECURE']
+        self.id_token_issuers = app.config['OIDC_VALID_ISSUERS']
 
-        try:
-            self.id_token_cookie_name = app.config['OIDC_ID_TOKEN_COOKIE_NAME']
-        except KeyError:
-            pass
-
-        try:
-            self.id_token_cookie_ttl = app.config['OIDC_ID_TOKEN_COOKIE_TTL']
-        except KeyError:
-            pass
-
-        try:
-            self.id_token_cookie_secure =\
-                app.config['OIDC_ID_TOKEN_COOKIE_SECURE']
-        except KeyError:
-            pass
 
         try:
             self.credentials_store = app.config['OIDC_CREDENTIALS_STORE']
@@ -234,7 +227,11 @@ class OpenIDConnect(object):
         if not id_token:
             return False
 
-        # TODO: step 2: check issuer
+        # step 2: check issuer
+        if id_token['iss'] not in self.id_token_issuers:
+            logger.error('id_token issued by non-trusted issuer: %s'
+                         % id_token['iss'])
+            return False
 
         if isinstance(id_token['aud'], list):
             # step 3 for audience list
