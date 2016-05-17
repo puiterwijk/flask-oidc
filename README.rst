@@ -9,8 +9,8 @@ flask-oidc
 .. image:: https://img.shields.io/pypi/dm/flask-oidc.svg?style=flat
   :target: https://pypi.python.org/pypi/flask-oidc
 
-.. image:: https://img.shields.io/travis/SteelPangolin/flask-oidc.svg?style=flat
-  :target: https://travis-ci.org/SteelPangolin/flask-oidc
+.. image:: https://img.shields.io/travis/puiterwijk/flask-oidc.svg?style=flat
+  :target: https://travis-ci.org/puiterwijk/flask-oidc
 
 Currently designed around Google's `oauth2client <https://github.com/google/oauth2client>`_ library
 and `OpenID Connect implementation <https://developers.google.com/accounts/docs/OAuth2Login>`_.
