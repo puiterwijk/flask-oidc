@@ -41,9 +41,18 @@ oidc = OpenIDConnect(app)
 oidc.id_token_cookie_secure = False
 
 @app.route('/')
-@oidc.check
 def hello_world():
+    if g.oidc_id_token:
+        return 'Hello, %s, <a href="/private">See private</a>' % \
+            g.oidc_id_token['email']
+    else:
+        return 'Welcome anonymous, <a href="/private">Log in</a>'
     return g.oidc_id_token['email']
+
+@app.route('/private')
+@oidc.require_login
+def hello_me():
+    return 'Hello, %s! <a href="/">Return</a>' % g.oidc_id_token['email']
 
 if __name__ == '__main__':
     app.run()

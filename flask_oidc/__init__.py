@@ -71,6 +71,7 @@ class OpenIDConnect(object):
 
         # register callback route and cookie-setting decorator
         app.route('/oidc_callback')(self.oidc_callback)
+        app.before_request(self.before_request)
         app.after_request(self.after_request)
 
         # load client_secrets.json
@@ -123,6 +124,10 @@ class OpenIDConnect(object):
                 max_age=self.id_token_cookie_ttl)
         return response
 
+    def before_request(self):
+        g.oidc_id_token = None
+        self.authenticate_or_redirect()
+
     def authenticate_or_redirect(self):
         """
         Helper function suitable for @app.before_request and @check (below).
@@ -170,18 +175,19 @@ class OpenIDConnect(object):
 
         return None
 
-    def check(self, view_func):
+    def require_login(self, view_func):
         """
         Use this to decorate view functions if only some of your app's views
         require authentication.
         """
         @wraps(view_func)
         def decorated(*args, **kwargs):
-            response = self.authenticate_or_redirect()
-            if response is not None:
-                return response
+            if g.oidc_id_token is None:
+                return self.redirect_to_auth_server(request.url)
             return view_func(*args, **kwargs)
         return decorated
+    # Backwards compatibility
+    check = require_login
 
     def flow_for_request(self):
         """
