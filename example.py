@@ -35,7 +35,7 @@ app.config.update({
     'SECRET_KEY': 'SomethingNotEntirelySecret',
     'TESTING': True,
     'DEBUG': True,
-    'OIDC_CLIENT_SECRETS': 'tests/client_secrets.json'
+    'OIDC_CLIENT_SECRETS': 'client_secrets.json'
 })
 oidc = OpenIDConnect(app)
 oidc.id_token_cookie_secure = False
