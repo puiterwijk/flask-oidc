@@ -208,6 +208,8 @@ class OpenIDConnect(object):
         extra_params = {
             'state': json.dumps(state),
         }
+        if self.app.config['OIDC_GOOGLE_APPS_DOMAIN']:
+            extra_params['hd'] = self.app.config['OIDC_GOOGLE_APPS_DOMAIN']
         flow = self.flow_for_request()
         auth_url = '{url}&{extra_params}'.format(
             url=flow.step1_get_authorize_url(),
