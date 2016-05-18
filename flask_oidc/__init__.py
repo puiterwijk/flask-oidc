@@ -11,7 +11,8 @@ from flask import request, session, redirect, url_for, g
 from oauth2client.client import flow_from_clientsecrets, OAuth2WebServerFlow,\
     AccessTokenRefreshError
 import httplib2
-from itsdangerous import TimedJSONWebSignatureSerializer, SignatureExpired
+from itsdangerous import JSONWebSignatureSerializer, BadSignature, \
+    TimedJSONWebSignatureSerializer, SignatureExpired
 
 __all__ = ['OpenIDConnect', 'MemoryCredentials']
 
@@ -77,7 +78,9 @@ class OpenIDConnect(object):
             scope=app.config['OIDC_SCOPES'])
         assert isinstance(self.flow, OAuth2WebServerFlow)
 
-        # create a cookie signer using the Flask secret key
+        # create signers using the Flask secret key
+        self.destination_serializer = JSONWebSignatureSerializer(
+            app.config['SECRET_KEY'])
         self.cookie_serializer = TimedJSONWebSignatureSerializer(
             app.config['SECRET_KEY'])
 
@@ -195,6 +198,7 @@ class OpenIDConnect(object):
                             before we noticed they weren't logged in
         :return: a redirect response
         """
+        destination = self.destination_serializer.dumps(destination)
         csrf_token = b64encode(self.urandom(24)).decode('utf-8')
         session['oidc_csrf_token'] = csrf_token
         state = {
@@ -321,10 +325,16 @@ class OpenIDConnect(object):
         # when Google is the IdP, the subject is their G+ account number
         self.credentials_store[id_token['sub']] = credentials
 
+        # Check whether somebody messed with the destination
+        destination = destination
+        try:
+            response = redirect(self.destination_serializer.loads(destination))
+        except BadSignature:
+            logger.error('Destination signature did not match. Rogue IdP?')
+            response = redirect('/')
+
         # set a persistent signed cookie containing the ID token
         # and redirect to the final destination
-        # TODO: validate redirect destination
-        response = redirect(destination)
         self.set_cookie_id_token(id_token)
         return response
 
