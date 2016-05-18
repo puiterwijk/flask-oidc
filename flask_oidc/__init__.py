@@ -277,7 +277,7 @@ class OpenIDConnect(object):
             logger.error('Invalid google apps domain')
             return False
 
-        if not id_token['email_verified'] and self.require_verified_email:
+        if not id_token.get('email_verified', False) and self.require_verified_email:
             logger.error('Email not verified')
             return False
 
