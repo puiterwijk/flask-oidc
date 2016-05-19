@@ -4,13 +4,13 @@ python:
 - '2.7'
 - '3.3'
 - '3.4'
-script: nosetests
+script: python setup.py test
 deploy:
   provider: pypi
-  user: SteelPangolin
+  user: puiterwijk
   password:
     secure: J2e+OVA6s5D14HH3Z551seTG/1Aaj6NUEjmc8FussEVUIobc0h76kG3yY0NAy5lzkIJ9JWTYHiKl3Rx8tteMlHKxh38Awc+bQqng8dJd6pJKO67pa6247LCbpYXlUjYlPwZlbkq+5ms8G5JblBlR6WCDdf4IQLSDBTusLDopcYY=
   on:
     tags: true
-    repo: SteelPangolin/flask-oidc
+    repo: puiterwijk/flask-oidc
   distributions: sdist bdist_wheel

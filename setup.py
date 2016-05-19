@@ -24,6 +24,7 @@ setup(
         'oauth2client',
         'six',
     ],
+    tests_require=['nose'],
     zip_safe=False,
     classifiers=[
         'Environment :: Web Environment',
