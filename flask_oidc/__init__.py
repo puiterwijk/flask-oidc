@@ -270,7 +270,8 @@ class OpenIDConnect(object):
         # step 12-13: not requested acr or auth_time, so not needed to test
 
         # additional steps specific to our usage
-        if id_token.get('hd') != current_app.config['OIDC_GOOGLE_APPS_DOMAIN']:
+        if current_app.config['OIDC_GOOGLE_APPS_DOMAIN'] and \
+                id_token.get('hd') != current_app.config['OIDC_GOOGLE_APPS_DOMAIN']:
             logger.error('Invalid google apps domain')
             return False
 
