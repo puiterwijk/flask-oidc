@@ -196,7 +196,8 @@ class OpenIDConnect(object):
                             before we noticed they weren't logged in
         :return: a redirect response
         """
-        destination = self.destination_serializer.dumps(destination)
+        destination = self.destination_serializer.dumps(destination).decode(
+            'utf-8')
         csrf_token = b64encode(self.urandom(24)).decode('utf-8')
         session['oidc_csrf_token'] = csrf_token
         state = {
