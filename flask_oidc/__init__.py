@@ -7,7 +7,7 @@ from copy import copy
 import logging
 
 from six.moves.urllib.parse import urlencode
-from flask import request, session, redirect, url_for, g
+from flask import request, session, redirect, url_for, g, current_app
 from oauth2client.client import flow_from_clientsecrets, OAuth2WebServerFlow,\
     AccessTokenRefreshError
 import httplib2
@@ -52,8 +52,6 @@ class OpenIDConnect(object):
         """
         Do setup that requires a Flask app.
         """
-        self.app = app
-
         # Set some default configuration options
         app.config.setdefault('OIDC_SCOPES', ['openid', 'email'])
         app.config.setdefault('OIDC_GOOGLE_APPS_DOMAIN', None)
@@ -91,7 +89,7 @@ class OpenIDConnect(object):
 
     def get_cookie_id_token(self):
         try:
-            id_token_cookie = request.cookies[self.app.config['OIDC_ID_TOKEN_COOKIE_NAME']]
+            id_token_cookie = request.cookies[current_app.config['OIDC_ID_TOKEN_COOKIE_NAME']]
             return self.cookie_serializer.loads(id_token_cookie)
         except (KeyError, SignatureExpired):
             logger.debug("Missing or invalid ID token cookie", exc_info=True)
@@ -111,10 +109,10 @@ class OpenIDConnect(object):
         if getattr(g, 'oidc_id_token_dirty', False):
             signed_id_token = self.cookie_serializer.dumps(g.oidc_id_token)
             response.set_cookie(
-                self.app.config['OIDC_ID_TOKEN_COOKIE_NAME'], signed_id_token,
-                secure=self.app.config['OIDC_ID_TOKEN_COOKIE_SECURE'],
+                current_app.config['OIDC_ID_TOKEN_COOKIE_NAME'], signed_id_token,
+                secure=current_app.config['OIDC_ID_TOKEN_COOKIE_SECURE'],
                 httponly=True,
-                max_age=self.app.config['OIDC_ID_TOKEN_COOKIE_TTL'])
+                max_age=current_app.config['OIDC_ID_TOKEN_COOKIE_TTL'])
         return response
 
     def before_request(self):
@@ -208,8 +206,8 @@ class OpenIDConnect(object):
         extra_params = {
             'state': json.dumps(state),
         }
-        if self.app.config['OIDC_GOOGLE_APPS_DOMAIN']:
-            extra_params['hd'] = self.app.config['OIDC_GOOGLE_APPS_DOMAIN']
+        if current_app.config['OIDC_GOOGLE_APPS_DOMAIN']:
+            extra_params['hd'] = current_app.config['OIDC_GOOGLE_APPS_DOMAIN']
         flow = self.flow_for_request()
         auth_url = '{url}&{extra_params}'.format(
             url=flow.step1_get_authorize_url(),
@@ -230,7 +228,7 @@ class OpenIDConnect(object):
             return False
 
         # step 2: check issuer
-        if id_token['iss'] not in self.app.config['OIDC_VALID_ISSUERS']:
+        if id_token['iss'] not in current_app.config['OIDC_VALID_ISSUERS']:
             logger.error('id_token issued by non-trusted issuer: %s'
                          % id_token['iss'])
             return False
@@ -263,7 +261,7 @@ class OpenIDConnect(object):
             return False
 
         # step 10: check iat
-        if id_token['iat'] < (self.time() - self.app.config['OIDC_CLOCK_SKEW']):
+        if id_token['iat'] < (self.time() - current_app.config['OIDC_CLOCK_SKEW']):
             logger.error('Token issued in the past')
             return False
 
@@ -272,12 +270,12 @@ class OpenIDConnect(object):
         # step 12-13: not requested acr or auth_time, so not needed to test
 
         # additional steps specific to our usage
-        if id_token.get('hd') != self.app.config['OIDC_GOOGLE_APPS_DOMAIN']:
+        if id_token.get('hd') != current_app.config['OIDC_GOOGLE_APPS_DOMAIN']:
             logger.error('Invalid google apps domain')
             return False
 
         if not id_token.get('email_verified', False) and \
-                self.app.config['OIDC_REQUIRE_VERIFIED_EMAIL']:
+                current_app.config['OIDC_REQUIRE_VERIFIED_EMAIL']:
             logger.error('Email not verified')
             return False
 
@@ -316,10 +314,10 @@ class OpenIDConnect(object):
         id_token = credentials.id_token
         if not self.is_id_token_valid(id_token):
             logger.debug("Invalid ID token")
-            if id_token.get('hd') != self.app.config['OIDC_GOOGLE_APPS_DOMAIN']:
+            if id_token.get('hd') != current_app.config['OIDC_GOOGLE_APPS_DOMAIN']:
                 return self.oidc_error(
                     "You must log in with an account from the {0} domain."
-                    .format(self.app.config['OIDC_GOOGLE_APPS_DOMAIN']),
+                    .format(current_app.config['OIDC_GOOGLE_APPS_DOMAIN']),
                     self.WRONG_GOOGLE_APPS_DOMAIN)
             return self.oidc_error()
 
