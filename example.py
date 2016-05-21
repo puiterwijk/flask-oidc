@@ -40,7 +40,6 @@ app.config.update({
     'OIDC_REQUIRE_VERIFIED_EMAIL': False
 })
 oidc = OpenIDConnect(app)
-oidc.id_token_cookie_secure = False
 
 @app.route('/')
 def hello_world():
