@@ -2,7 +2,10 @@ from pkg_resources import resource_filename, resource_stream
 import json
 import codecs
 from base64 import urlsafe_b64encode
-import urlparse
+try:
+    from urlparse import parse_qs
+except ImportError:
+    from urllib.parse import parse_qs
 
 from six.moves.urllib.parse import urlsplit, parse_qs, urlencode
 from nose.tools import nottest
@@ -45,7 +48,7 @@ class MockHttp(object):
         self.last_request['path'] = path
         post_args = {}
         if method == 'POST':
-            post_args = urlparse.parse_qs(post_string)
+            post_args = parse_qs(post_string)
 
         if path == 'https://test/token':
             return MockHttpResponse(), json.dumps({
