@@ -44,11 +44,11 @@ oidc.id_token_cookie_secure = False
 @app.route('/')
 def hello_world():
     if g.oidc_id_token:
-        return 'Hello, %s, <a href="/private">See private</a>' % \
+        return ('Hello, %s, <a href="/private">See private</a> ' \
+                '<a href="/logout">Log out</a>') % \
             g.oidc_id_token['email']
     else:
         return 'Welcome anonymous, <a href="/private">Log in</a>'
-    return g.oidc_id_token['email']
 
 @app.route('/private')
 @oidc.require_login
@@ -59,6 +59,11 @@ def hello_me():
 @oidc.accept_token(True, ['openid'])
 def hello_api():
     return json.dumps({'hello': 'Welcome %s' % g.oidc_token_info['sub']})
+
+@app.route('/logout')
+def logout():
+    oidc.logout()
+    return 'Hi, you have been logged out! <a href="/">Return</a>'
 
 if __name__ == '__main__':
     app.run()

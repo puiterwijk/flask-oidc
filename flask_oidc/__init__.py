@@ -115,12 +115,22 @@ class OpenIDConnect(object):
         Set a new ID token cookie if the ID token has changed.
         """
         if getattr(g, 'oidc_id_token_dirty', False):
-            signed_id_token = self.cookie_serializer.dumps(g.oidc_id_token)
-            response.set_cookie(
-                current_app.config['OIDC_ID_TOKEN_COOKIE_NAME'], signed_id_token,
-                secure=current_app.config['OIDC_ID_TOKEN_COOKIE_SECURE'],
-                httponly=True,
-                max_age=current_app.config['OIDC_ID_TOKEN_COOKIE_TTL'])
+            if g.oidc_id_token:
+                signed_id_token = self.cookie_serializer.dumps(g.oidc_id_token)
+                response.set_cookie(
+                    current_app.config['OIDC_ID_TOKEN_COOKIE_NAME'],
+                    signed_id_token,
+                    secure=current_app.config['OIDC_ID_TOKEN_COOKIE_SECURE'],
+                    httponly=True,
+                    max_age=current_app.config['OIDC_ID_TOKEN_COOKIE_TTL'])
+            else:
+                # This was a log out
+                response.set_cookie(
+                    current_app.config['OIDC_ID_TOKEN_COOKIE_NAME'],
+                    '',
+                    secure=current_app.config['OIDC_ID_TOKEN_COOKIE_SECURE'],
+                    httponly=True,
+                    expires=0)
         return response
 
     def before_request(self):
@@ -353,6 +363,21 @@ class OpenIDConnect(object):
         return (message, 401, {
             'Content-Type': 'text/plain',
         })
+
+    def logout(self):
+        """
+        Request the browser to please forget the cookie we set, to clear the
+        current session.
+
+        Note that as described in [1], this will not log out in the case of a
+        browser that doesn't clear cookies when requested to, and the user
+        could be automatically logged in when they hit any authenticated
+        endpoint.
+
+        [1]: https://github.com/puiterwijk/flask-oidc/issues/5#issuecomment-86187023
+        """
+        # TODO: Add single logout
+        self.set_cookie_id_token(None)
 
     # Below here is for resource servers to validate tokens
     def accept_token(self, require_token=False, scopes_required=None):
