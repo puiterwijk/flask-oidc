@@ -9,7 +9,7 @@ import logging
 from six.moves.urllib.parse import urlencode
 from flask import request, session, redirect, url_for, g, current_app
 from oauth2client.client import flow_from_clientsecrets, OAuth2WebServerFlow,\
-    AccessTokenRefreshError
+    AccessTokenRefreshError, OAuth2Credentials
 import httplib2
 from itsdangerous import JSONWebSignatureSerializer, BadSignature, \
     TimedJSONWebSignatureSerializer, SignatureExpired
@@ -149,7 +149,8 @@ class OpenIDConnect(object):
         if self.time() >= id_token['exp']:
             # get credentials from store
             try:
-                credentials = self.credentials_store[id_token['sub']]
+                credentials = OAuth2Credentials.from_json(
+                    self.credentials_store[id_token['sub']])
             except KeyError:
                 logger.debug("Expired ID token, credentials missing",
                              exc_info=True)
@@ -159,7 +160,7 @@ class OpenIDConnect(object):
             try:
                 credentials.refresh(self.http)
                 id_token = credentials.id_token
-                self.credentials_store[id_token['sub']] = credentials
+                self.credentials_store[id_token['sub']] = credentials.to_json()
                 self.set_cookie_id_token(id_token)
             except AccessTokenRefreshError:
                 # Can't refresh. Wipe credentials and redirect user to IdP
@@ -333,7 +334,7 @@ class OpenIDConnect(object):
 
         # store credentials by subject
         # when Google is the IdP, the subject is their G+ account number
-        self.credentials_store[id_token['sub']] = credentials
+        self.credentials_store[id_token['sub']] = credentials.to_json()
 
         # Check whether somebody messed with the destination
         destination = destination
