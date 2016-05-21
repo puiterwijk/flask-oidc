@@ -25,6 +25,9 @@ setup(
         'six',
     ],
     tests_require=['nose', 'mock'],
+    entry_points = {
+        'console_scripts': ['oidc-register=flask_oidc.registration_util:main'],
+    },
     zip_safe=False,
     classifiers=[
         'Environment :: Web Environment',
