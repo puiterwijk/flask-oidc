@@ -56,9 +56,9 @@ class OpenIDConnect(object):
         Do setup that requires a Flask app.
         """
         # Load client_secrets.json to pre-initialize some configuration
-        self.client_secrets = json.loads(
-            open(app.config['OIDC_CLIENT_SECRETS'],
-                 'r').read()).values()[0]
+        secrets = json.loads(open(app.config['OIDC_CLIENT_SECRETS'],
+                                  'r').read())
+        self.client_secrets = list(secrets.values())[0]
 
         # Set some default configuration options
         app.config.setdefault('OIDC_SCOPES', ['openid', 'email'])
