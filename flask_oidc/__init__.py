@@ -2,9 +2,10 @@ from functools import wraps
 import os
 import json
 from base64 import b64encode
-import time as time_module
+import time
 from copy import copy
 import logging
+from warnings import warn
 
 from six.moves.urllib.parse import urlencode
 from flask import request, session, redirect, url_for, g, current_app
@@ -42,10 +43,13 @@ class OpenIDConnect(object):
             if credentials_store is not None\
             else MemoryCredentials()
 
-        # stuff that we might want to override for tests
-        self.http = http if http is not None else httplib2.Http()
-        self.time = time if time is not None else time_module.time
-        self.urandom = urandom if urandom is not None else os.urandom
+        if http is not None:
+            warn('HTTP argument is deprecated and unused', DeprecationWarning)
+        if time is not None:
+            warn('time argument is deprecated and unused', DeprecationWarning)
+        if urandom is not None:
+            warn('urandom argument is deprecated and unused',
+                 DeprecationWarning)
 
         # get stuff from the app's config, which may override stuff set above
         if app is not None:
@@ -156,7 +160,7 @@ class OpenIDConnect(object):
 
         # ID token expired
         # when Google is the IdP, this happens after one hour
-        if self.time() >= id_token['exp']:
+        if time.time() >= id_token['exp']:
             # get credentials from store
             try:
                 credentials = OAuth2Credentials.from_json(
@@ -168,7 +172,7 @@ class OpenIDConnect(object):
 
             # refresh and store credentials
             try:
-                credentials.refresh(self.http)
+                credentials.refresh(httplib2.Http())
                 id_token = credentials.id_token
                 self.credentials_store[id_token['sub']] = credentials.to_json()
                 self._set_cookie_id_token(id_token)
@@ -217,7 +221,7 @@ class OpenIDConnect(object):
         """
         destination = self.destination_serializer.dumps(destination).decode(
             'utf-8')
-        csrf_token = b64encode(self.urandom(24)).decode('utf-8')
+        csrf_token = b64encode(os.urandom(24)).decode('utf-8')
         session['oidc_csrf_token'] = csrf_token
         state = {
             'csrf_token': csrf_token,
@@ -276,12 +280,12 @@ class OpenIDConnect(object):
         # step 6-8: TLS checked
 
         # step 9: check exp
-        if int(self.time()) >= int(id_token['exp']):
+        if int(time.time()) >= int(id_token['exp']):
             logger.error('Token has expired')
             return False
 
         # step 10: check iat
-        if id_token['iat'] < (self.time() - current_app.config['OIDC_CLOCK_SKEW']):
+        if id_token['iat'] < (time.time() - current_app.config['OIDC_CLOCK_SKEW']):
             logger.error('Token issued in the past')
             return False
 
@@ -331,7 +335,7 @@ class OpenIDConnect(object):
 
         # make a request to IdP to exchange the auth code for OAuth credentials
         flow = self._flow_for_request()
-        credentials = flow.step2_exchange(code, http=self.http)
+        credentials = flow.step2_exchange(code)
         id_token = credentials.id_token
         if not self.is_id_token_valid(id_token):
             logger.debug("Invalid ID token")
@@ -470,7 +474,7 @@ class OpenIDConnect(object):
                    'client_secret': self.client_secrets['client_secret']}
         headers = {'Content-type': 'application/x-www-form-urlencoded'}
 
-        resp, content = self.http.request(
+        resp, content = httplib2.Http().request(
             self.client_secrets['token_introspection_uri'], 'POST',
             urlencode(request), headers=headers)
         # TODO: Cache this reply

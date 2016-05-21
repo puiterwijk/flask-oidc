@@ -1,11 +1,15 @@
 from pkg_resources import resource_filename, resource_stream
 import json
+import httplib2
+import time
 import codecs
 from base64 import urlsafe_b64encode
 try:
     from urlparse import parse_qs
+    from mock import Mock, patch
 except ImportError:
     from urllib.parse import parse_qs
+    from unittest.mock import Mock, patch
 
 from six.moves.urllib.parse import urlsplit, parse_qs, urlencode
 from nose.tools import nottest
@@ -17,35 +21,18 @@ with resource_stream(__name__, 'client_secrets.json') as f:
     client_secrets = json.load(codecs.getreader('utf-8')(f))
 
 
-class Clock(object):
-    """
-    Mock time source.
-    """
-    def __init__(self, now):
-        self.now = now
-
-    def time(self):
-        return self.now
-
-
 class MockHttpResponse(object):
     status = 200
 
 
+last_request = None
 class MockHttp(object):
-    """
-    Mock httplib2 client.
-    Assumes all requests are auth code exchanges
-    that return OAuth access/ID tokens.
-    """
-    def __init__(self, iat, exp):
-        self.iat = iat
-        self.exp = exp
-        self.last_request = {}
-
     def request(self, path, method='GET', post_string='', **kwargs):
-        self.last_request = kwargs
-        self.last_request['path'] = path
+        global last_request
+        last_request = kwargs
+        last_request['path'] = path
+        iat = time.time() - 1
+        exp = time.time() + 1
         post_args = {}
         if method == 'POST':
             post_args = parse_qs(post_string)
@@ -58,8 +45,8 @@ class MockHttp(object):
                     'aud': client_secrets['web']['client_id'],
                     'sub': 'mock_user_id',
                     'email_verified': True,
-                    'iat': self.iat,
-                    'exp': self.exp,
+                    'iat': iat,
+                    'exp': exp,
                     'iss': 'accounts.google.com',
                 }).encode('utf-8')).decode('utf-8')),
             }).encode('utf-8')
@@ -98,22 +85,16 @@ def make_test_client():
     """
     :return: A Flask test client for the test app, and the mocks it uses.
     """
-    clock = Clock(now=2)
-
-    http = MockHttp(iat=clock.now - 1, exp=clock.now + 1)
-
     app = create_app({
         'SECRET_KEY': 'SEEEKRIT',
         'TESTING': True,
         'OIDC_CLIENT_SECRETS': resource_filename(
             __name__, 'client_secrets.json'),
     }, {
-        'http': http,
-        'time': clock.time,
     })
     test_client = app.test_client()
 
-    return test_client, http, clock
+    return test_client
 
 
 def callback_url_for(response):
@@ -129,11 +110,13 @@ def callback_url_for(response):
     return callback_url
 
 
+@patch('time.time', Mock(return_value=time.time()))
+@patch('httplib2.Http', MockHttp)
 def test_signin():
     """
     Happy path authentication test.
     """
-    test_client, _, _ = make_test_client()
+    test_client = make_test_client()
 
     # make an unauthenticated request,
     # which should result in a redirect to the IdP
@@ -154,34 +137,35 @@ def test_signin():
         "(unexpected path {location.path})".format(location=r2location)
 
 
+@patch('httplib2.Http', MockHttp)
 def test_refresh():
     """
     Test token expiration and refresh.
     """
-    test_client, http, clock = make_test_client()
+    test_client = make_test_client()
 
-    # authenticate and get an ID token cookie
-    auth_redirect = test_client.get('/')
-    callback_redirect = test_client.get(callback_url_for(auth_redirect))
-    actual_page = test_client.get(callback_redirect.headers['Location'])
-    page_text = ''.join(codecs.iterdecode(actual_page.response, 'utf-8'))
-    assert page_text == 'too many secrets', "Authentication failed"
-
-    # expire the ID token cookie
-    clock.now = 5
+    with patch('time.time', Mock(return_value=time.time())) as time_1:
+        # authenticate and get an ID token cookie
+        auth_redirect = test_client.get('/')
+        callback_redirect = test_client.get(callback_url_for(auth_redirect))
+        actual_page = test_client.get(callback_redirect.headers['Location'])
+        page_text = ''.join(codecs.iterdecode(actual_page.response, 'utf-8'))
+        assert page_text == 'too many secrets', "Authentication failed"
 
     # app should now try to use the refresh token
-    test_client.get('/')
-    body = parse_qs(http.last_request['body'])
-    assert body.get('refresh_token') == ['mock_refresh_token'],\
-        "App should have tried to refresh credentials"
+    with patch('time.time', Mock(return_value=time.time() + 10)) as time_2:
+        test_client.get('/')
+        body = parse_qs(last_request['body'])
+        assert body.get('refresh_token') == ['mock_refresh_token'],\
+            "App should have tried to refresh credentials"
 
 
+@patch('httplib2.Http', MockHttp)
 def test_api_token():
     """
     Test API token acceptance.
     """
-    test_client, http, clock = make_test_client()
+    test_client = make_test_client()
 
     # Test without a token
     resp = test_client.get('/api')
