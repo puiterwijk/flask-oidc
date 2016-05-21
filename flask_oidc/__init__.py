@@ -75,7 +75,7 @@ class OpenIDConnect(object):
                               self.client_secrets.get('issuer')
                               or GOOGLE_ISSUERS)
         app.config.setdefault('OIDC_CLOCK_SKEW', 60)  # 1 minute
-        app.config.setdefault('OIDC_REQUIRE_VERIFIED_EMAIL', True)
+        app.config.setdefault('OIDC_REQUIRE_VERIFIED_EMAIL', False)
 
         # register callback route and cookie-setting decorator
         app.route('/oidc_callback')(self.oidc_callback)
@@ -98,6 +98,61 @@ class OpenIDConnect(object):
             self.credentials_store = app.config['OIDC_CREDENTIALS_STORE']
         except KeyError:
             pass
+
+    @property
+    def user_loggedin(self):
+        return g.oidc_id_token is not None
+
+    def user_getfield(self, field):
+        info = self.user_getinfo([field])
+        return info.get(field)
+
+    def user_getinfo(self, fields):
+        if g.oidc_id_token is None:
+            raise Exception('User was not authenticated')
+        info = {}
+        all_info = None
+        for field in fields:
+            if field in g.oidc_id_token:
+                info[field] = g.oidc_id_token[field]
+            else:
+                # This was not in the id_token. Let's get user information
+                if all_info is None:
+                    all_info = self.retrieve_userinfo()
+                    if all_info is None:
+                        # To make sure we don't retry for every field
+                        all_info = {}
+                if field in all_info:
+                    info[field] = all_info[field]
+                else:
+                    # We didn't get this information
+                    pass
+        return info
+
+    def retrieve_userinfo(self):
+        if 'userinfo_uri' not in self.client_secrets:
+            logger.debug('Userinfo uri not specified')
+            return None
+
+        # Cache the info from this request
+        if '_oidc_userinfo' in g:
+            return g._oidc_userinfo
+
+	try:
+	    credentials = OAuth2Credentials.from_json(
+		self.credentials_store[g.oidc_id_token['sub']])
+	except KeyError:
+	    logger.debug("Expired ID token, credentials missing",
+			 exc_info=True)
+	    return None
+
+        http = httplib2.Http()
+        credentials.authorize(http)
+
+        resp, content = http.request(self.client_secrets['userinfo_uri'])
+        logger.debug('Retrieved user info: %s' % content)
+        return json.loads(content)
+
 
     def _get_cookie_id_token(self):
         try:

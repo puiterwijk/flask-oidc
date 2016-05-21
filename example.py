@@ -37,23 +37,25 @@ app.config.update({
     'DEBUG': True,
     'OIDC_CLIENT_SECRETS': 'client_secrets.json',
     'OIDC_ID_TOKEN_COOKIE_SECURE': False,
+    'OIDC_REQUIRE_VERIFIED_EMAIL': False
 })
 oidc = OpenIDConnect(app)
 oidc.id_token_cookie_secure = False
 
 @app.route('/')
 def hello_world():
-    if g.oidc_id_token:
+    if oidc.user_loggedin:
         return ('Hello, %s, <a href="/private">See private</a> ' \
                 '<a href="/logout">Log out</a>') % \
-            g.oidc_id_token['email']
+            oidc.user_getfield('email')
     else:
         return 'Welcome anonymous, <a href="/private">Log in</a>'
 
 @app.route('/private')
 @oidc.require_login
 def hello_me():
-    return 'Hello, %s! <a href="/">Return</a>' % g.oidc_id_token['email']
+    info = oidc.user_getinfo(['email'])
+    return 'Hello, %s! <a href="/">Return</a>' % info.get('email')
 
 @app.route('/api')
 @oidc.accept_token(True, ['openid'])
