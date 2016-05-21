@@ -2,6 +2,7 @@ from pkg_resources import resource_filename, resource_stream
 import json
 import codecs
 from base64 import urlsafe_b64encode
+import urlparse
 
 from six.moves.urllib.parse import urlsplit, parse_qs, urlencode
 from nose.tools import nottest
@@ -39,21 +40,54 @@ class MockHttp(object):
         self.exp = exp
         self.last_request = {}
 
-    def request(self, path, **kwargs):
+    def request(self, path, method='GET', post_string='', **kwargs):
         self.last_request = kwargs
         self.last_request['path'] = path
-        return MockHttpResponse(), json.dumps({
-            'access_token': 'mock_access_token',
-            'refresh_token': 'mock_refresh_token',
-            'id_token': '.{0}.'.format(urlsafe_b64encode(json.dumps({
-                'aud': client_secrets['web']['client_id'],
-                'sub': 'mock_user_id',
-                'email_verified': True,
-                'iat': self.iat,
-                'exp': self.exp,
-                'iss': 'accounts.google.com',
-            }).encode('utf-8')).decode('utf-8')),
-        }).encode('utf-8')
+        post_args = {}
+        if method == 'POST':
+            post_args = urlparse.parse_qs(post_string)
+
+        if path == 'https://test/token':
+            return MockHttpResponse(), json.dumps({
+                'access_token': 'mock_access_token',
+                'refresh_token': 'mock_refresh_token',
+                'id_token': '.{0}.'.format(urlsafe_b64encode(json.dumps({
+                    'aud': client_secrets['web']['client_id'],
+                    'sub': 'mock_user_id',
+                    'email_verified': True,
+                    'iat': self.iat,
+                    'exp': self.exp,
+                    'iss': 'accounts.google.com',
+                }).encode('utf-8')).decode('utf-8')),
+            }).encode('utf-8')
+        elif path == 'https://test/tokeninfo':
+            assert post_args['client_id'] == ['MyClient'], \
+                'Client ID is specified'
+            req_token = post_args['token'][0]
+            token_info = {'active': False}
+            if req_token in ['query_token', 'post_token']:
+                token_info['active'] = True
+                token_info['scope'] = 'openid'
+                token_info['sub'] = 'valid_sub'
+                token_info['aud'] = 'MyClient'
+            elif req_token == 'insufficient_token':
+                token_info['active'] = True
+                token_info['scope'] = 'email'
+                token_info['sub'] = 'valid_sub'
+                token_info['aud'] = 'MyClient'
+            elif req_token == 'multi_aud_token':
+                token_info['active'] = True
+                token_info['scope'] = 'openid'
+                token_info['sub'] = 'valid_sub'
+                token_info['aud'] = ['MyClient', 'TheirClient']
+            elif req_token == 'some_elses_token':
+                token_info['active'] = True
+                token_info['scope'] = 'openid'
+                token_info['sub'] = 'valid_sub'
+                token_info['aud'] = 'TheirClient'
+            return MockHttpResponse(), json.dumps(token_info)
+        else:
+            raise Exception('Non-recognized path %s requested' % path)
 
 
 @nottest
@@ -138,3 +172,44 @@ def test_refresh():
     body = parse_qs(http.last_request['body'])
     assert body.get('refresh_token') == ['mock_refresh_token'],\
         "App should have tried to refresh credentials"
+
+
+def test_api_token():
+    """
+    Test API token acceptance.
+    """
+    test_client, http, clock = make_test_client()
+
+    # Test without a token
+    resp = test_client.get('/api')
+    assert resp.status_code == 401, "Token should be required"
+    resp = json.loads(resp.get_data())
+    assert resp['error'] == 'invalid_token', "Token should be requested"
+
+    # Test with invalid token
+    resp = test_client.get('/api?access_token=invalid_token')
+    assert resp.status_code == 401, 'Token should be rejected'
+
+    # Test with query token
+    resp = test_client.get('/api?access_token=query_token')
+    assert resp.status_code == 200, 'Token should be accepted'
+    resp = json.loads(resp.get_data())
+    assert resp['token']['sub'] == 'valid_sub'
+
+    # Test with post token
+    resp = test_client.post('/api', 'POST', 'access_token=post_token')
+    assert resp.status_code == 200, 'Token should be accepted'
+
+    # Test with insufficient token
+    resp = test_client.post('/api?access_token=insufficient_token')
+    assert resp.status_code == 401, 'Token should be refused'
+    resp = json.loads(resp.get_data())
+    assert resp['error'] == 'invalid_token'
+
+    # Test with multiple audiences
+    resp = test_client.get('/api?access_token=multi_aud_token')
+    assert resp.status_code == 200, 'Token should be accepted'
+
+    # Test with token for another audience
+    resp = test_client.get('/api?access_token=some_elses_token')
+    assert resp.status_code == 401, 'Token should be refused'

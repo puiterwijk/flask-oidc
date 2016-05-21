@@ -55,5 +55,10 @@ def hello_world():
 def hello_me():
     return 'Hello, %s! <a href="/">Return</a>' % g.oidc_id_token['email']
 
+@app.route('/api')
+@oidc.accept_token(True, ['openid'])
+def hello_api():
+    return json.dumps({'hello': 'Welcome %s' % g.oidc_token_info['sub']})
+
 if __name__ == '__main__':
     app.run()

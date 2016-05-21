@@ -58,7 +58,7 @@ class OpenIDConnect(object):
         # Load client_secrets.json to pre-initialize some configuration
         self.client_secrets = json.loads(
             open(app.config['OIDC_CLIENT_SECRETS'],
-                 'r').read())
+                 'r').read()).values()[0]
 
         # Set some default configuration options
         app.config.setdefault('OIDC_SCOPES', ['openid', 'email'])
@@ -353,3 +353,100 @@ class OpenIDConnect(object):
         return (message, 401, {
             'Content-Type': 'text/plain',
         })
+
+    # Below here is for resource servers to validate tokens
+    def accept_token(self, require_token=False, scopes_required=None):
+        """
+        Use this to decorate view functions that should accept OAuth2 tokens,
+        this will most likely apply to API functions.
+
+        Note that this only works if a token introspection url is configured,
+        as that URL will be queried for the validity and scopes of a token.
+        """
+        if scopes_required is None:
+            scopes_required = []
+        scopes_required = set(scopes_required)
+        def wrapper(view_func):
+            @wraps(view_func)
+            def decorated(*args, **kwargs):
+                token = None
+                # TODO: Accept Authorization header
+                if 'access_token' in request.form:
+                    token = request.form['access_token']
+                elif 'access_token' in request.args:
+                    token = request.args['access_token']
+
+                token_info = None
+                valid_token = False
+                has_required_scopes = False
+                if token:
+                    try:
+                        token_info = self.get_token_info(token)
+                    except Exception as ex:
+                        token_info = {'active': False}
+                        logger.error('ERROR: Unable to get token info')
+                        logger.error(str(ex))
+                    valid_token = token_info['active']
+
+                    if 'aud' in token_info:
+                        valid_audience = False
+                        aud = token_info['aud']
+                        clid = self.client_secrets['client_id']
+                        if isinstance(aud, list):
+                            valid_audience = clid in aud
+                        else:
+                            valid_audience = clid == aud
+
+                        if not valid_audience:
+                            logger.error('Refused token because of invalid '
+                                         'audience')
+                            valid_token = False
+
+                    if valid_token:
+                        token_scopes = token_info.get('scope', '').split(' ')
+                    else:
+                        token_scopes = []
+                    has_required_scopes = scopes_required.issubset(
+                        set(token_scopes))
+
+                    if not has_required_scopes:
+                        logger.debug('Token missed required scopes')
+
+                if not require_token or (valid_token and has_required_scopes):
+                    g.oidc_token_info = token_info
+                    return view_func(*args, **kwargs)
+
+                if not valid_token:
+                    return (json.dumps(
+                        {'error': 'invalid_token',
+                         'error_description': 'Token required but invalid'}),
+                        401, {'WWW-Authenticate': 'Bearer'})
+                elif not has_required_scopes:
+                    return (json.dumps(
+                        {'error': 'invalid_token',
+                         'error_description':
+                             'Token does not have required scopes'}),
+                        401, {'WWW-Authenticate': 'Bearer'})
+                else:
+                    return (json.dumps(
+                        {'error': 'invalid_token',
+                         'error_description':
+                            'Something went wrong checking your token'}),
+                        401, {'WWW-Authenticate': 'Bearer'})
+            return decorated
+        return wrapper
+
+    def get_token_info(self, token):
+        # We hardcode to use client_secret_post, because that's what the Google
+        # oauth2client library defaults to
+        request = {'token': token,
+                   'token_type_hint': 'Bearer',
+                   'client_id': self.client_secrets['client_id'],
+                   'client_secret': self.client_secrets['client_secret']}
+        headers = {'Content-type': 'application/x-www-form-urlencoded'}
+
+        resp, content = self.http.request(
+            self.client_secrets['token_introspection_uri'], 'POST',
+            urlencode(request), headers=headers)
+        # TODO: Cache this reply
+        return json.loads(content)
