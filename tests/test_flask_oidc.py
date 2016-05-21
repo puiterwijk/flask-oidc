@@ -186,7 +186,7 @@ def test_api_token():
     # Test without a token
     resp = test_client.get('/api')
     assert resp.status_code == 401, "Token should be required"
-    resp = json.loads(resp.get_data())
+    resp = json.loads(resp.get_data().decode('utf-8'))
     assert resp['error'] == 'invalid_token', "Token should be requested"
 
     # Test with invalid token
@@ -196,17 +196,17 @@ def test_api_token():
     # Test with query token
     resp = test_client.get('/api?access_token=query_token')
     assert resp.status_code == 200, 'Token should be accepted'
-    resp = json.loads(resp.get_data())
+    resp = json.loads(resp.get_data().decode('utf-8'))
     assert resp['token']['sub'] == 'valid_sub'
 
     # Test with post token
-    resp = test_client.post('/api', 'POST', 'access_token=post_token')
+    resp = test_client.post('/api', data={'access_token': 'post_token'})
     assert resp.status_code == 200, 'Token should be accepted'
 
     # Test with insufficient token
     resp = test_client.post('/api?access_token=insufficient_token')
     assert resp.status_code == 401, 'Token should be refused'
-    resp = json.loads(resp.get_data())
+    resp = json.loads(resp.get_data().decode('utf-8'))
     assert resp['error'] == 'invalid_token'
 
     # Test with multiple audiences
