@@ -75,8 +75,8 @@ class OpenIDConnect(object):
 
         # register callback route and cookie-setting decorator
         app.route('/oidc_callback')(self.oidc_callback)
-        app.before_request(self.before_request)
-        app.after_request(self.after_request)
+        app.before_request(self._before_request)
+        app.after_request(self._after_request)
 
         # Initialize oauth2client
         self.flow = flow_from_clientsecrets(
@@ -95,7 +95,7 @@ class OpenIDConnect(object):
         except KeyError:
             pass
 
-    def get_cookie_id_token(self):
+    def _get_cookie_id_token(self):
         try:
             id_token_cookie = request.cookies[current_app.config['OIDC_ID_TOKEN_COOKIE_NAME']]
             return self.cookie_serializer.loads(id_token_cookie)
@@ -103,14 +103,14 @@ class OpenIDConnect(object):
             logger.debug("Missing or invalid ID token cookie", exc_info=True)
             return None
 
-    def set_cookie_id_token(self, id_token):
+    def _set_cookie_id_token(self, id_token):
         """
         Cooperates with @after_request to set a new ID token cookie.
         """
         g.oidc_id_token = id_token
         g.oidc_id_token_dirty = True
 
-    def after_request(self, response):
+    def _after_request(self, response):
         """
         Set a new ID token cookie if the ID token has changed.
         """
@@ -133,7 +133,7 @@ class OpenIDConnect(object):
                     expires=0)
         return response
 
-    def before_request(self):
+    def _before_request(self):
         g.oidc_id_token = None
         self.authenticate_or_redirect()
 
@@ -150,7 +150,7 @@ class OpenIDConnect(object):
             return None
 
         # retrieve signed ID token cookie
-        id_token = self.get_cookie_id_token()
+        id_token = self._get_cookie_id_token()
         if id_token is None:
             return self.redirect_to_auth_server(request.url)
 
@@ -171,7 +171,7 @@ class OpenIDConnect(object):
                 credentials.refresh(self.http)
                 id_token = credentials.id_token
                 self.credentials_store[id_token['sub']] = credentials.to_json()
-                self.set_cookie_id_token(id_token)
+                self._set_cookie_id_token(id_token)
             except AccessTokenRefreshError:
                 # Can't refresh. Wipe credentials and redirect user to IdP
                 # for re-authentication.
@@ -199,7 +199,7 @@ class OpenIDConnect(object):
     # Backwards compatibility
     check = require_login
 
-    def flow_for_request(self):
+    def _flow_for_request(self):
         """
         Build a flow with the correct absolute callback URL for this request.
         :return:
@@ -228,12 +228,12 @@ class OpenIDConnect(object):
         }
         if current_app.config['OIDC_GOOGLE_APPS_DOMAIN']:
             extra_params['hd'] = current_app.config['OIDC_GOOGLE_APPS_DOMAIN']
-        flow = self.flow_for_request()
+        flow = self._flow_for_request()
         auth_url = '{url}&{extra_params}'.format(
             url=flow.step1_get_authorize_url(),
             extra_params=urlencode(extra_params))
         # if the user has an ID token, it's invalid, or we wouldn't be here
-        self.set_cookie_id_token(None)
+        self._set_cookie_id_token(None)
         return redirect(auth_url)
 
     def is_id_token_valid(self, id_token):
@@ -330,7 +330,7 @@ class OpenIDConnect(object):
             return self.oidc_error()
 
         # make a request to IdP to exchange the auth code for OAuth credentials
-        flow = self.flow_for_request()
+        flow = self._flow_for_request()
         credentials = flow.step2_exchange(code, http=self.http)
         id_token = credentials.id_token
         if not self.is_id_token_valid(id_token):
@@ -356,7 +356,7 @@ class OpenIDConnect(object):
 
         # set a persistent signed cookie containing the ID token
         # and redirect to the final destination
-        self.set_cookie_id_token(id_token)
+        self._set_cookie_id_token(id_token)
         return response
 
     def oidc_error(self, message='Not Authorized', code=None):
@@ -377,7 +377,7 @@ class OpenIDConnect(object):
         [1]: https://github.com/puiterwijk/flask-oidc/issues/5#issuecomment-86187023
         """
         # TODO: Add single logout
-        self.set_cookie_id_token(None)
+        self._set_cookie_id_token(None)
 
     # Below here is for resource servers to validate tokens
     def accept_token(self, require_token=False, scopes_required=None):
@@ -406,7 +406,7 @@ class OpenIDConnect(object):
                 has_required_scopes = False
                 if token:
                     try:
-                        token_info = self.get_token_info(token)
+                        token_info = self._get_token_info(token)
                     except Exception as ex:
                         token_info = {'active': False}
                         logger.error('ERROR: Unable to get token info')
@@ -461,7 +461,7 @@ class OpenIDConnect(object):
             return decorated
         return wrapper
 
-    def get_token_info(self, token):
+    def _get_token_info(self, token):
         # We hardcode to use client_secret_post, because that's what the Google
         # oauth2client library defaults to
         request = {'token': token,
