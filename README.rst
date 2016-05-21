@@ -12,10 +12,12 @@ flask-oidc
 .. image:: https://img.shields.io/travis/puiterwijk/flask-oidc.svg?style=flat
   :target: https://travis-ci.org/puiterwijk/flask-oidc
 
-Currently designed around Google's `oauth2client <https://github.com/google/oauth2client>`_ library
-and `OpenID Connect implementation <https://developers.google.com/accounts/docs/OAuth2Login>`_.
-May or may not interoperate with other OpenID Connect identity providers,
-for example, Microsoft's `Azure Active Directory <http://msdn.microsoft.com/en-us/library/azure/dn499820.aspx>`_.
+This library should work with any standards compliant OpenID Connect provider.
+
+It has been tested with:
+* `Google+ Login <https://developers.google.com/accounts/docs/OAuth2Login>`
+* `Ipsilon <https://ipsilon-project.org/>`
+
 
 Project status
 ==============
