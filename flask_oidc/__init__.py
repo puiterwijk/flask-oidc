@@ -138,20 +138,24 @@ class OpenIDConnect(object):
         if '_oidc_userinfo' in g:
             return g._oidc_userinfo
 
-	try:
-	    credentials = OAuth2Credentials.from_json(
-		self.credentials_store[g.oidc_id_token['sub']])
-	except KeyError:
-	    logger.debug("Expired ID token, credentials missing",
-			 exc_info=True)
-	    return None
+        try:
+            credentials = OAuth2Credentials.from_json(
+                self.credentials_store[g.oidc_id_token['sub']])
+        except KeyError:
+            logger.debug("Expired ID token, credentials missing",
+                         exc_info=True)
+            return None
 
         http = httplib2.Http()
         credentials.authorize(http)
 
         resp, content = http.request(self.client_secrets['userinfo_uri'])
         logger.debug('Retrieved user info: %s' % content)
-        return json.loads(content)
+        info = json.loads(content)
+
+        g._oidc_userinfo = info
+
+        return info
 
 
     def _get_cookie_id_token(self):
