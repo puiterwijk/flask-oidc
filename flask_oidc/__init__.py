@@ -28,6 +28,9 @@ class MemoryCredentials(dict):
     pass
 
 
+GOOGLE_ISSUERS = ['accounts.google.com', 'https://accounts.google.com']
+
+
 class OpenIDConnect(object):
     """
     @see: https://developers.google.com/api-client-library/python/start/get_started
@@ -52,6 +55,11 @@ class OpenIDConnect(object):
         """
         Do setup that requires a Flask app.
         """
+        # Load client_secrets.json to pre-initialize some configuration
+        self.client_secrets = json.loads(
+            open(app.config['OIDC_CLIENT_SECRETS'],
+                 'r').read())
+
         # Set some default configuration options
         app.config.setdefault('OIDC_SCOPES', ['openid', 'email'])
         app.config.setdefault('OIDC_GOOGLE_APPS_DOMAIN', None)
@@ -60,8 +68,8 @@ class OpenIDConnect(object):
         # should ONLY be turned off for local debugging
         app.config.setdefault('OIDC_ID_TOKEN_COOKIE_SECURE', True)
         app.config.setdefault('OIDC_VALID_ISSUERS',
-                              ['accounts.google.com',
-                               'https://accounts.google.com'])
+                              self.client_secrets.get('issuer')
+                              or GOOGLE_ISSUERS)
         app.config.setdefault('OIDC_CLOCK_SKEW', 60)  # 1 minute
         app.config.setdefault('OIDC_REQUIRE_VERIFIED_EMAIL', True)
 
@@ -70,7 +78,7 @@ class OpenIDConnect(object):
         app.before_request(self.before_request)
         app.after_request(self.after_request)
 
-        # load client_secrets.json
+        # Initialize oauth2client
         self.flow = flow_from_clientsecrets(
             app.config['OIDC_CLIENT_SECRETS'],
             scope=app.config['OIDC_SCOPES'])
