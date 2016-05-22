@@ -101,6 +101,7 @@ class OpenIDConnect(object):
                               or GOOGLE_ISSUERS)
         app.config.setdefault('OIDC_CLOCK_SKEW', 60)  # 1 minute
         app.config.setdefault('OIDC_REQUIRE_VERIFIED_EMAIL', False)
+        app.config.setdefault('OIDC_OPENID_REALM', None)
 
         # register callback route and cookie-setting decorator
         app.route('/oidc_callback')(self.oidc_callback)
@@ -316,6 +317,10 @@ class OpenIDConnect(object):
         }
         if current_app.config['OIDC_GOOGLE_APPS_DOMAIN']:
             extra_params['hd'] = current_app.config['OIDC_GOOGLE_APPS_DOMAIN']
+        if current_app.config['OIDC_OPENID_REALM']:
+            extra_params['openid.realm'] = current_app.config[
+                'OIDC_OPENID_REALM']
+
         flow = self._flow_for_request()
         auth_url = '{url}&{extra_params}'.format(
             url=flow.step1_get_authorize_url(),
