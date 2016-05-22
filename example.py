@@ -55,7 +55,6 @@ def hello_world():
 @oidc.require_login
 def hello_me():
     info = oidc.user_getinfo(['email', 'openid_id'])
-    print g.oidc_id_token
     return ('Hello, %s (%s)! <a href="/">Return</a>' %
         (info.get('email'), info.get('openid_id')))
 
