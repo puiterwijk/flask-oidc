@@ -25,9 +25,11 @@
 import argparse
 import json
 import os.path
+import sys
 
 from flask_oidc import discovery
 from flask_oidc import registration
+
 
 def _parse_args():
     parser = argparse.ArgumentParser(description='Help register an OpenID '

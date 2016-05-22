@@ -1,15 +1,12 @@
 from pkg_resources import resource_filename, resource_stream
 import json
-import httplib2
 import time
 import codecs
 from base64 import urlsafe_b64encode
 try:
-    from urlparse import parse_qs
-    from mock import Mock, patch
-except ImportError:
-    from urllib.parse import parse_qs
     from unittest.mock import Mock, patch
+except ImportError:
+    from mock import Mock, patch
 
 from six.moves.urllib.parse import urlsplit, parse_qs, urlencode
 from nose.tools import nottest
@@ -17,6 +14,7 @@ from nose.tools import nottest
 from .app import create_app
 
 
+last_request = None
 with resource_stream(__name__, 'client_secrets.json') as f:
     client_secrets = json.load(codecs.getreader('utf-8')(f))
 
@@ -25,7 +23,6 @@ class MockHttpResponse(object):
     status = 200
 
 
-last_request = None
 class MockHttp(object):
     def request(self, path, method='GET', post_string='', **kwargs):
         global last_request

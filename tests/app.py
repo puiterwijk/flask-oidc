@@ -13,6 +13,7 @@ def index():
         'Content-Type': 'text/plain; charset=utf-8'
     }
 
+
 def api():
     return json.dumps({'token': g.oidc_token_info})
 

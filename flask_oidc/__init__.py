@@ -97,8 +97,8 @@ class OpenIDConnect(object):
         # should ONLY be turned off for local debugging
         app.config.setdefault('OIDC_ID_TOKEN_COOKIE_SECURE', True)
         app.config.setdefault('OIDC_VALID_ISSUERS',
-                              self.client_secrets.get('issuer')
-                              or GOOGLE_ISSUERS)
+                              (self.client_secrets.get('issuer') or
+                               GOOGLE_ISSUERS))
         app.config.setdefault('OIDC_CLOCK_SKEW', 60)  # 1 minute
         app.config.setdefault('OIDC_REQUIRE_VERIFIED_EMAIL', False)
         app.config.setdefault('OIDC_OPENID_REALM', None)
@@ -183,10 +183,10 @@ class OpenIDConnect(object):
 
         return info
 
-
     def _get_cookie_id_token(self):
         try:
-            id_token_cookie = request.cookies[current_app.config['OIDC_ID_TOKEN_COOKIE_NAME']]
+            id_token_cookie = request.cookies[current_app.config[
+                'OIDC_ID_TOKEN_COOKIE_NAME']]
             return self.cookie_serializer.loads(id_token_cookie)
         except (KeyError, SignatureExpired):
             logger.debug("Missing or invalid ID token cookie", exc_info=True)
@@ -374,7 +374,8 @@ class OpenIDConnect(object):
             return False
 
         # step 10: check iat
-        if id_token['iat'] < (time.time() - current_app.config['OIDC_CLOCK_SKEW']):
+        if id_token['iat'] < (time.time() -
+                              current_app.config['OIDC_CLOCK_SKEW']):
             logger.error('Token issued in the past')
             return False
 
@@ -384,7 +385,8 @@ class OpenIDConnect(object):
 
         # additional steps specific to our usage
         if current_app.config['OIDC_GOOGLE_APPS_DOMAIN'] and \
-                id_token.get('hd') != current_app.config['OIDC_GOOGLE_APPS_DOMAIN']:
+                id_token.get('hd') != current_app.config[
+                    'OIDC_GOOGLE_APPS_DOMAIN']:
             logger.error('Invalid google apps domain')
             return False
 
@@ -428,7 +430,8 @@ class OpenIDConnect(object):
         id_token = credentials.id_token
         if not self.is_id_token_valid(id_token):
             logger.debug("Invalid ID token")
-            if id_token.get('hd') != current_app.config['OIDC_GOOGLE_APPS_DOMAIN']:
+            if id_token.get('hd') != current_app.config[
+                    'OIDC_GOOGLE_APPS_DOMAIN']:
                 return self.oidc_error(
                     "You must log in with an account from the {0} domain."
                     .format(current_app.config['OIDC_GOOGLE_APPS_DOMAIN']),
@@ -484,6 +487,7 @@ class OpenIDConnect(object):
         if scopes_required is None:
             scopes_required = []
         scopes_required = set(scopes_required)
+
         def wrapper(view_func):
             @wraps(view_func)
             def decorated(*args, **kwargs):

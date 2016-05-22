@@ -25,6 +25,7 @@
 import httplib2
 import json
 
+
 # OpenID Connect Discovery 1.0
 def discover_OP_information(OP_uri):
     _, content = httplib2.Http().request(

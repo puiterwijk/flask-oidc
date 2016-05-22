@@ -25,6 +25,7 @@
 import json
 import httplib2
 
+
 def check_redirect_uris(uris, client_type=None):
     """
     This function checks all return uris provided and tries to deduce
@@ -74,7 +75,7 @@ def register_client(provider_info, redirect_uris):
         raise Exception('Error occured during registration: %s (%s)'
                         % (client_info['error'],
                            client_info.get('error_description')))
-    
+
     json_file = {'web': {
         'client_id': client_info['client_id'],
         'client_secret': client_info['client_secret'],
