@@ -41,6 +41,15 @@ Alternatively the object can be instantiated without the application in
 which case it can later be registered for an application with the
 :meth:`~OpenIDConnect.init_app` method.
 
+Note that you should probably provide the library with a place to store the
+credentials it has retrieved for the user. These need to be stored in a place
+where the user themselves or an attacker can not get to them.
+To provide this, give an object that has ``__setitem__`` and ``__getitem__``
+dict APIs implemented as second argument to the :meth:`~OpenIDConnect.__init__`
+call.
+Without this, the library will only work on a single thread, and only retain
+sessions until the server is restarted.
+
 Using this library is very simple: you can use
 :data:`~OpenIDConnect.user_loggedin` to determine whether a user is currently
 logged in using OpenID Connect.
