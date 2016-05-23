@@ -185,6 +185,12 @@ class OpenIDConnect(object):
 
         return info
 
+
+    def get_cookie_id_token(self):
+        warn('You are using a deprecated function (get_cookie_id_token). '
+             'Please reconsider using this', DeprecationWarning)
+        return self._get_cookie_id_token()
+
     def _get_cookie_id_token(self):
         try:
             id_token_cookie = request.cookies[current_app.config[
@@ -193,6 +199,11 @@ class OpenIDConnect(object):
         except (KeyError, SignatureExpired):
             logger.debug("Missing or invalid ID token cookie", exc_info=True)
             return None
+
+    def set_cookie_id_token(self, id_token):
+        warn('You are using a deprecated function (set_cookie_id_token). '
+             'Please reconsider using this', DeprecationWarning)
+        return self._set_cookie_id_token(id_token)
 
     def _set_cookie_id_token(self, id_token):
         """
@@ -289,6 +300,11 @@ class OpenIDConnect(object):
         return decorated
     # Backwards compatibility
     check = require_login
+
+    def flow_for_request(self):
+        warn('You are using a deprecated function (flow_for_request). '
+             'Please reconsider using this', DeprecationWarning)
+        return self._flow_for_request()
 
     def _flow_for_request(self):
         """
