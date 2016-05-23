@@ -124,3 +124,4 @@ Registration
 
 .. _Flask: http://flask.pocoo.org/
 .. _OpenID Connect: https://openid.net/connect/
+.. _oauth2client: https://github.com/google/oauth2client
