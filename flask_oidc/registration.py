@@ -40,6 +40,8 @@ def check_redirect_uris(uris, client_type=None):
     :returns: The deduced client type.
     :rtype: str
     :raises ValueError: An error occured while checking the redirect uris.
+
+    .. versionadded:: 1.0
     """
     if client_type not in [None, 'native', 'web']:
         raise ValueError('Invalid client type indicator used')
@@ -69,6 +71,8 @@ class RegistrationError(Exception):
     """
     This class is used to pass errors reported by the OpenID Provider during
     dynamic registration.
+
+    .. versionadded:: 1.0
     """
     errorcode = None
     errordescription = None
@@ -96,6 +100,8 @@ def register_client(provider_info, redirect_uris):
     :raises ValueError: The same error as used by check_redirect_uris.
     :raises RegistrationError: Indicates an error was returned by the OpenID
         Provider during registration.
+
+    .. versionadded:: 1.0
     """
     client_type = check_redirect_uris(redirect_uris)
 

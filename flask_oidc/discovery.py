@@ -35,6 +35,8 @@ def discover_OP_information(OP_uri):
     :type OP_uri: str
     :returns: The contents of the Provider metadata document.
     :rtype: dict
+
+    .. versionadded:: 1.0
     """
     _, content = httplib2.Http().request(
         '%s/openidc/.well-known/openid-configuration' % OP_uri)

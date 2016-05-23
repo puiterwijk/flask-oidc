@@ -138,6 +138,8 @@ class OpenIDConnect(object):
 
         Returns:
             bool: Whether the user is logged in with Flask-OIDC.
+
+        .. versionadded:: 1.0
         """
         return g.oidc_id_token is not None
 
@@ -150,6 +152,8 @@ class OpenIDConnect(object):
         :returns: The value of the field. Depending on the type, this may be
             a string, list, dict, or something else.
         :rtype: object
+
+        .. versionadded:: 1.0
         """
         info = self.user_getinfo([field])
         return info.get(field)
@@ -167,6 +171,8 @@ class OpenIDConnect(object):
         :rtype: dict
         :raises Exception: If the user was not authenticated. Check this with
             user_loggedin.
+
+        .. versionadded:: 1.0
         """
         if g.oidc_id_token is None:
             raise Exception('User was not authenticated')
@@ -343,6 +349,9 @@ class OpenIDConnect(object):
         Use this to decorate view functions that require a user to be logged
         in. If the user is not already logged in, they will be sent to the
         Provider to log in, after which they will be returned.
+
+        .. versionadded:: 1.0
+           This was :func:`check` before.
         """
         @wraps(view_func)
         def decorated(*args, **kwargs):
@@ -555,6 +564,8 @@ class OpenIDConnect(object):
         endpoint.
 
         [1]: https://github.com/puiterwijk/flask-oidc/issues/5#issuecomment-86187023
+
+        .. versionadded:: 1.0
         """
         # TODO: Add single logout
         self._set_cookie_id_token(None)
@@ -576,6 +587,8 @@ class OpenIDConnect(object):
             granted by the token before being allowed to call the protected
             function.
         :type scopes_required: list
+
+        .. versionadded:: 1.0
         """
         if scopes_required is None:
             scopes_required = []
