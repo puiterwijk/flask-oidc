@@ -30,6 +30,16 @@ def check_redirect_uris(uris, client_type=None):
     """
     This function checks all return uris provided and tries to deduce
     as what type of client we should register.
+
+    :param uris: The redirect URIs to check.
+    :type uris: list
+    :param client_type: An indicator of which client type you are expecting
+        to be used. If this does not match the deduced type, an error will
+        be raised.
+    :type client_type: str
+    :returns: The deduced client type.
+    :rtype: str
+    :raises ValueError: An error occured while checking the redirect uris.
     """
     if client_type not in [None, 'native', 'web']:
         raise ValueError('Invalid client type indicator used')
@@ -55,8 +65,38 @@ def check_redirect_uris(uris, client_type=None):
     return client_type
 
 
+class RegistrationError(Exception):
+    """
+    This class is used to pass errors reported by the OpenID Provider during
+    dynamic registration.
+    """
+    errorcode = None
+    errordescription = None
+
+    def __init__(self, response):
+        self.errorcode = response['error']
+        self.errordescription = response.get('error_description')
+
+
 # OpenID Connect Dynamic Client Registration 1.0
 def register_client(provider_info, redirect_uris):
+    """
+    This function registers a new client with the specified OpenID Provider,
+    and then returns the regitered client ID and other information.
+
+    :param provider_info: The contents of the discovery endpoint as
+        specified by the OpenID Connect Discovery 1.0 specifications.
+    :type provider_info: dict
+    :param redirect_uris: The redirect URIs the application wants to
+        register.
+    :type redirect_uris: list
+    :returns: An object containing the information needed to configure the
+        actual client code to communicate with the OpenID Provider.
+    :rtype: dict
+    :raises ValueError: The same error as used by check_redirect_uris.
+    :raises RegistrationError: Indicates an error was returned by the OpenID
+        Provider during registration.
+    """
     client_type = check_redirect_uris(redirect_uris)
 
     submit_info = {'redirect_uris': redirect_uris,

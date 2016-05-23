@@ -59,8 +59,7 @@ GOOGLE_ISSUERS = ['accounts.google.com', 'https://accounts.google.com']
 
 class OpenIDConnect(object):
     """
-    @see: https://developers.google.com/api-client-library/python/start/get_started
-    @see: https://developers.google.com/api-client-library/python/samples/authorized_api_web_server_calendar.py
+    The core OpenID Connect client object.
     """
     def __init__(self, app=None, credentials_store=None, http=None, time=None,
                  urandom=None):
@@ -83,6 +82,9 @@ class OpenIDConnect(object):
     def init_app(self, app):
         """
         Do setup that requires a Flask app.
+
+        :param app: The application to initialize.
+        :type app: Flask
         """
         # Load client_secrets.json to pre-initialize some configuration
         secrets = json.loads(open(app.config['OIDC_CLIENT_SECRETS'],
@@ -108,7 +110,7 @@ class OpenIDConnect(object):
         app.config.setdefault('OIDC_RESOURCE_CHECK_AUD', True)
 
         # register callback route and cookie-setting decorator
-        app.route('/oidc_callback')(self.oidc_callback)
+        app.route('/oidc_callback')(self._oidc_callback)
         app.before_request(self._before_request)
         app.after_request(self._after_request)
 
@@ -131,13 +133,41 @@ class OpenIDConnect(object):
 
     @property
     def user_loggedin(self):
+        """
+        Represents whether the user is currently logged in.
+
+        Returns:
+            bool: Whether the user is logged in with Flask-OIDC.
+        """
         return g.oidc_id_token is not None
 
     def user_getfield(self, field):
+        """
+        Request a single field of information about the user.
+
+        :param field: The name of the field requested.
+        :type field: str
+        :returns: The value of the field. Depending on the type, this may be
+            a string, list, dict, or something else.
+        :rtype: object
+        """
         info = self.user_getinfo([field])
         return info.get(field)
 
     def user_getinfo(self, fields):
+        """
+        Request multiple fields of information about the user.
+
+        :param fields: The names of the fields requested.
+        :type fields: list
+        :returns: The values of the current user for the fields requested.
+            The keys are the field names, values are the values of the
+            fields as indicated by the OpenID Provider. Note that fields
+            that were not provided by the Provider are absent.
+        :rtype: dict
+        :raises Exception: If the user was not authenticated. Check this with
+            user_loggedin.
+        """
         if g.oidc_id_token is None:
             raise Exception('User was not authenticated')
         info = {}
@@ -148,7 +178,7 @@ class OpenIDConnect(object):
             else:
                 # This was not in the id_token. Let's get user information
                 if all_info is None:
-                    all_info = self.retrieve_userinfo()
+                    all_info = self._retrieve_userinfo()
                     if all_info is None:
                         # To make sure we don't retry for every field
                         all_info = {}
@@ -159,7 +189,14 @@ class OpenIDConnect(object):
                     pass
         return info
 
-    def retrieve_userinfo(self):
+    def _retrieve_userinfo(self):
+        """
+        Requests extra user information from the Provider's UserInfo and
+        returns the result.
+
+        :returns: The contents of the UserInfo endpoint.
+        :rtype: dict
+        """
         if 'userinfo_uri' not in self.client_secrets:
             logger.debug('Userinfo uri not specified')
             return None
@@ -189,6 +226,10 @@ class OpenIDConnect(object):
 
 
     def get_cookie_id_token(self):
+        """
+        .. deprecated:: 1.0
+           Use :func:`user_getinfo` instead.
+        """
         warn('You are using a deprecated function (get_cookie_id_token). '
              'Please reconsider using this', DeprecationWarning)
         return self._get_cookie_id_token()
@@ -203,6 +244,9 @@ class OpenIDConnect(object):
             return None
 
     def set_cookie_id_token(self, id_token):
+        """
+        .. deprecated:: 1.0
+        """
         warn('You are using a deprecated function (set_cookie_id_token). '
              'Please reconsider using this', DeprecationWarning)
         return self._set_cookie_id_token(id_token)
@@ -243,14 +287,19 @@ class OpenIDConnect(object):
 
     def authenticate_or_redirect(self):
         """
-        Helper function suitable for @app.before_request and @check (below).
+        Helper function suitable for @app.before_request and @check.
         Sets g.oidc_id_token to the ID token if the user has successfully
         authenticated, else returns a redirect object so they can go try
         to authenticate.
-        :return: A redirect, or None if the user is authenticated.
+
+        :returns: A redirect object, or None if the user is logged in.
+        :rtype: Redirect
+
+        .. deprecated:: 1.0
+           Use :func:`require_login` instead.
         """
         # the auth callback and error pages don't need user to be authenticated
-        if request.endpoint in frozenset(['oidc_callback', 'oidc_error']):
+        if request.endpoint in frozenset(['_oidc_callback', '_oidc_error']):
             return None
 
         # retrieve signed ID token cookie
@@ -291,8 +340,9 @@ class OpenIDConnect(object):
 
     def require_login(self, view_func):
         """
-        Use this to decorate view functions if only some of your app's views
-        require authentication.
+        Use this to decorate view functions that require a user to be logged
+        in. If the user is not already logged in, they will be sent to the
+        Provider to log in, after which they will be returned.
         """
         @wraps(view_func)
         def decorated(*args, **kwargs):
@@ -302,8 +352,16 @@ class OpenIDConnect(object):
         return decorated
     # Backwards compatibility
     check = require_login
+    """
+    .. deprecated:: 1.0
+       Use :func:`require_login` instead.
+    """
 
     def flow_for_request(self):
+        """
+        .. deprecated:: 1.0
+           Use :func:`require_login` instead.
+        """
         warn('You are using a deprecated function (flow_for_request). '
              'Please reconsider using this', DeprecationWarning)
         return self._flow_for_request()
@@ -314,15 +372,21 @@ class OpenIDConnect(object):
         :return:
         """
         flow = copy(self.flow)
-        flow.redirect_uri = url_for('oidc_callback', _external=True)
+        flow.redirect_uri = url_for('_oidc_callback', _external=True)
         return flow
 
     def redirect_to_auth_server(self, destination):
         """
         Set a CSRF token in the session, and redirect to the IdP.
-        :param destination: the page that the user was going to,
-                            before we noticed they weren't logged in
-        :return: a redirect response
+
+        :param destination: The page that the user was going to,
+            before we noticed they weren't logged in.
+        :type destination: str
+        :returns: A redirect response to start the login process.
+        :rtype: Redirect
+
+        .. deprecated:: 1.0
+           Use :func:`require_login` instead.
         """
         destination = self.destination_serializer.dumps(destination).decode(
             'utf-8')
@@ -349,7 +413,7 @@ class OpenIDConnect(object):
         self._set_cookie_id_token(None)
         return redirect(auth_url)
 
-    def is_id_token_valid(self, id_token):
+    def _is_id_token_valid(self, id_token):
         """
         Check if `id_token` is a current ID token for this application,
         was issued by the Apps domain we expected,
@@ -419,7 +483,7 @@ class OpenIDConnect(object):
 
     WRONG_GOOGLE_APPS_DOMAIN = 'WRONG_GOOGLE_APPS_DOMAIN'
 
-    def oidc_callback(self):
+    def _oidc_callback(self):
         """
         Exchange the auth code for actual credentials,
         then redirect to the originally requested page.
@@ -436,27 +500,27 @@ class OpenIDConnect(object):
         except (KeyError, ValueError):
             logger.debug("Can't retrieve CSRF token, state, or code",
                          exc_info=True)
-            return self.oidc_error()
+            return self._oidc_error()
 
         # check callback CSRF token passed to IdP
         # against session CSRF token held by user
         if csrf_token != session_csrf_token:
             logger.debug("CSRF token mismatch")
-            return self.oidc_error()
+            return self._oidc_error()
 
         # make a request to IdP to exchange the auth code for OAuth credentials
         flow = self._flow_for_request()
         credentials = flow.step2_exchange(code)
         id_token = credentials.id_token
-        if not self.is_id_token_valid(id_token):
+        if not self._is_id_token_valid(id_token):
             logger.debug("Invalid ID token")
             if id_token.get('hd') != current_app.config[
                     'OIDC_GOOGLE_APPS_DOMAIN']:
-                return self.oidc_error(
+                return self._oidc_error(
                     "You must log in with an account from the {0} domain."
                     .format(current_app.config['OIDC_GOOGLE_APPS_DOMAIN']),
                     self.WRONG_GOOGLE_APPS_DOMAIN)
-            return self.oidc_error()
+            return self._oidc_error()
 
         # store credentials by subject
         # when Google is the IdP, the subject is their G+ account number
@@ -475,7 +539,7 @@ class OpenIDConnect(object):
         self._set_cookie_id_token(id_token)
         return response
 
-    def oidc_error(self, message='Not Authorized', code=None):
+    def _oidc_error(self, message='Not Authorized', code=None):
         return (message, 401, {
             'Content-Type': 'text/plain',
         })
@@ -503,6 +567,15 @@ class OpenIDConnect(object):
 
         Note that this only works if a token introspection url is configured,
         as that URL will be queried for the validity and scopes of a token.
+
+        :param require_token: Whether a token is required for the current
+            function. If this is True, we will abort the request if there
+            was no token provided.
+        :type require_token: bool
+        :param scopes_required: List of scopes that are required to be
+            granted by the token before being allowed to call the protected
+            function.
+        :type scopes_required: list
         """
         if scopes_required is None:
             scopes_required = []

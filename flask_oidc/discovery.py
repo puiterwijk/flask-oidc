@@ -28,6 +28,14 @@ import json
 
 # OpenID Connect Discovery 1.0
 def discover_OP_information(OP_uri):
+    """
+    Discovers information about the provided OpenID Provider.
+
+    :param OP_uri: The base URI of the Provider information is requested for.
+    :type OP_uri: str
+    :returns: The contents of the Provider metadata document.
+    :rtype: dict
+    """
     _, content = httplib2.Http().request(
         '%s/openidc/.well-known/openid-configuration' % OP_uri)
     return json.loads(content)
