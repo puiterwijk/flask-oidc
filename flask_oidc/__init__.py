@@ -104,6 +104,8 @@ class OpenIDConnect(object):
         app.config.setdefault('OIDC_CLOCK_SKEW', 60)  # 1 minute
         app.config.setdefault('OIDC_REQUIRE_VERIFIED_EMAIL', False)
         app.config.setdefault('OIDC_OPENID_REALM', None)
+        # Configuration for resource servers
+        app.config.setdefault('OIDC_RESOURCE_CHECK_AUD', True)
 
         # register callback route and cookie-setting decorator
         app.route('/oidc_callback')(self.oidc_callback)
@@ -528,7 +530,8 @@ class OpenIDConnect(object):
                         logger.error(str(ex))
                     valid_token = token_info['active']
 
-                    if 'aud' in token_info:
+                    if 'aud' in token_info and \
+                            current_app.config['OIDC_RESOURCE_CHECK_AUD']:
                         valid_audience = False
                         aud = token_info['aud']
                         clid = self.client_secrets['client_id']
