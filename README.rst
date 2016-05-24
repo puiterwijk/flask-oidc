@@ -9,6 +9,10 @@ flask-oidc
 .. image:: https://img.shields.io/pypi/dm/flask-oidc.svg?style=flat
   :target: https://pypi.python.org/pypi/flask-oidc
 
+.. image:: https://readthedocs.org/projects/flask-oidc/badge/?version=latest
+   :target: http://flask-oidc.readthedocs.io/en/latest/?badge=latest
+   :alt: Documentation Status
+
 .. image:: https://img.shields.io/travis/puiterwijk/flask-oidc.svg?style=flat
   :target: https://travis-ci.org/puiterwijk/flask-oidc
 
