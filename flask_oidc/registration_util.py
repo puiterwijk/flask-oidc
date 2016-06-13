@@ -51,32 +51,33 @@ def main():
     if os.path.exists(args.output_file):
         print('Output file exists. Please provide other filename')
         return 1
+
+    redirect_uris = ['%s/oidc_callback' % args.application_url]
+    registration.check_redirect_uris(redirect_uris)
+    try:
+        OP = discovery.discover_OP_information(args.provider_url)
+    except Exception as ex:
+        print('Error discovering OP information')
+        if args.debug:
+            print(ex)
+        return 1
+    if args.debug:
+        print('Provider info: %s' % OP)
+    try:
+        reg_info = registration.register_client(OP, redirect_uris)
+    except Exception as ex:
+        print('Error registering client')
+        if args.debug:
+            print(ex)
+        return 1
+    if args.debug:
+        print('Registration info: %s' % reg_info)
+
+    if args.token_introspection_uri:
+        reg_info['web']['token_introspection_uri'] = \
+            args.token_introspection_uri
+
     with open(args.output_file, 'w') as outfile:
-        redirect_uris = ['%s/oidc_callback' % args.application_url]
-        registration.check_redirect_uris(redirect_uris)
-        try:
-            OP = discovery.discover_OP_information(args.provider_url)
-        except Exception as ex:
-            print('Error discovering OP information')
-            if args.debug:
-                print(ex)
-            return 1
-        if args.debug:
-            print('Provider info: %s' % OP)
-        try:
-            reg_info = registration.register_client(OP, redirect_uris)
-        except Exception as ex:
-            print('Error registering client')
-            if args.debug:
-                print(ex)
-            return 1
-        if args.debug:
-            print('Registration info: %s' % reg_info)
-
-        if args.token_introspection_uri:
-            reg_info['web']['token_introspection_uri'] = \
-                args.token_introspection_uri
-
         outfile.write(json.dumps(reg_info))
         print('Client information file written')
 
