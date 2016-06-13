@@ -39,5 +39,5 @@ def discover_OP_information(OP_uri):
     .. versionadded:: 1.0
     """
     _, content = httplib2.Http().request(
-        '%s/openidc/.well-known/openid-configuration' % OP_uri)
+        '%s/.well-known/openid-configuration' % OP_uri)
     return json.loads(content)
