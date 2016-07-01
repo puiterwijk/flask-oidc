@@ -24,11 +24,15 @@
 
 import argparse
 import json
+import logging
 import os.path
 import sys
 
 from flask_oidc import discovery
 from flask_oidc import registration
+
+logging.basicConfig()
+LOG = logging.getLogger("oidc-register")
 
 
 def _parse_args():
@@ -52,6 +56,9 @@ def main():
         print('Output file exists. Please provide other filename')
         return 1
 
+    if arg.debug:
+        LOG.setLevel(logging.DEBUG)
+
     redirect_uris = ['%s/oidc_callback' % args.application_url]
     registration.check_redirect_uris(redirect_uris)
     try:
@@ -60,6 +67,7 @@ def main():
         print('Error discovering OP information')
         if args.debug:
             print(ex)
+            LOG.exception("Error caught when discover OP information:")
         return 1
     if args.debug:
         print('Provider info: %s' % OP)
@@ -69,6 +77,7 @@ def main():
         print('Error registering client')
         if args.debug:
             print(ex)
+            LOG.exception("Error caught when registering the client:")
         return 1
     if args.debug:
         print('Registration info: %s' % reg_info)
