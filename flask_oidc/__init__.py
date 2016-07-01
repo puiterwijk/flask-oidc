@@ -205,7 +205,7 @@ class OpenIDConnect(object):
         """
         if 'userinfo_uri' not in self.client_secrets:
             logger.debug('Userinfo uri not specified')
-            return None
+            raise AssertionError('UserInfo URI not specified')
 
         # Cache the info from this request
         if '_oidc_userinfo' in g:
