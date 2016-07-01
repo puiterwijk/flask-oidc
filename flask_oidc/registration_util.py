@@ -67,7 +67,7 @@ def main():
         print('Error discovering OP information')
         if args.debug:
             print(ex)
-            LOG.exception("Error caught when discover OP information:")
+            LOG.exception("Error caught when discovering OP information:")
         return 1
     if args.debug:
         print('Provider info: %s' % OP)
