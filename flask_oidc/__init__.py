@@ -143,7 +143,7 @@ class OpenIDConnect(object):
         """
         return g.oidc_id_token is not None
 
-    def user_getfield(self, field):
+    def user_getfield(self, field, access_token=None):
         """
         Request a single field of information about the user.
 
@@ -155,10 +155,10 @@ class OpenIDConnect(object):
 
         .. versionadded:: 1.0
         """
-        info = self.user_getinfo([field])
+        info = self.user_getinfo([field], access_token)
         return info.get(field)
 
-    def user_getinfo(self, fields):
+    def user_getinfo(self, fields, access_token=None):
         """
         Request multiple fields of information about the user.
 
@@ -174,17 +174,17 @@ class OpenIDConnect(object):
 
         .. versionadded:: 1.0
         """
-        if g.oidc_id_token is None:
+        if g.oidc_id_token is None and access_token is None:
             raise Exception('User was not authenticated')
         info = {}
         all_info = None
         for field in fields:
-            if field in g.oidc_id_token:
+            if access_token is None and field in g.oidc_id_token:
                 info[field] = g.oidc_id_token[field]
             else:
                 # This was not in the id_token. Let's get user information
                 if all_info is None:
-                    all_info = self._retrieve_userinfo()
+                    all_info = self._retrieve_userinfo(access_token)
                     if all_info is None:
                         # To make sure we don't retry for every field
                         all_info = {}
@@ -195,7 +195,7 @@ class OpenIDConnect(object):
                     pass
         return info
 
-    def _retrieve_userinfo(self):
+    def _retrieve_userinfo(self, access_token=None):
         """
         Requests extra user information from the Provider's UserInfo and
         returns the result.
@@ -211,18 +211,23 @@ class OpenIDConnect(object):
         if '_oidc_userinfo' in g:
             return g._oidc_userinfo
 
-        try:
-            credentials = OAuth2Credentials.from_json(
-                self.credentials_store[g.oidc_id_token['sub']])
-        except KeyError:
-            logger.debug("Expired ID token, credentials missing",
-                         exc_info=True)
-            return None
-
         http = httplib2.Http()
-        credentials.authorize(http)
+        if access_token is None:
+            try:
+                credentials = OAuth2Credentials.from_json(
+                    self.credentials_store[g.oidc_id_token['sub']])
+            except KeyError:
+                logger.debug("Expired ID token, credentials missing",
+                             exc_info=True)
+                return None
+            credentials.authorize(http)
+            resp, content = http.request(self.client_secrets['userinfo_uri'])
+        else:
+            # We have been manually overriden with an access token
+            resp, content = http.request(self.client_secrets['userinfo_uri'],
+                                         "POST", urlencode({"access_token":
+                                                            access_token}))
 
-        resp, content = http.request(self.client_secrets['userinfo_uri'])
         logger.debug('Retrieved user info: %s' % content)
         info = json.loads(content)
 
