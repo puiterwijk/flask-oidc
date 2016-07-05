@@ -346,7 +346,7 @@ class OpenIDConnect(object):
                         id_token['exp'] = time.time() + 3600
                     else:
                         id_token['exp'] = calendar.timegm(
-                            credentials.token_expiry)
+                            credentials.token_expiry.timetuple())
                 self.credentials_store[id_token['sub']] = credentials.to_json()
                 self._set_cookie_id_token(id_token)
             except AccessTokenRefreshError:
