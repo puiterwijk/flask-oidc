@@ -31,6 +31,7 @@ import time
 from copy import copy
 import logging
 from warnings import warn
+import calendar
 
 from six.moves.urllib.parse import urlencode
 from flask import request, session, redirect, url_for, g, current_app
@@ -339,7 +340,13 @@ class OpenIDConnect(object):
                     # It is not guaranteed that we will get a new ID Token on
                     # refresh, so if we do not, let's just update the id token
                     # expiry field and reuse the existing ID Token.
-                    id_token['exp'] = time.time() + credentials.expires_in
+                    if credentials.token_expiry is None:
+                        logger.debug('Expired ID token, no new expiry. Falling'
+                                     ' back to assuming 1 hour')
+                        id_token['exp'] = time.time() + 3600
+                    else:
+                        id_token['exp'] = calendar.timegm(
+                            credentials.token_expiry)
                 self.credentials_store[id_token['sub']] = credentials.to_json()
                 self._set_cookie_id_token(id_token)
             except AccessTokenRefreshError:
