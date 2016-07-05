@@ -333,7 +333,13 @@ class OpenIDConnect(object):
             # refresh and store credentials
             try:
                 credentials.refresh(httplib2.Http())
-                id_token = credentials.id_token
+                if credentials.id_token:
+                    id_token = credentials.id_token
+                else:
+                    # It is not guaranteed that we will get a new ID Token on
+                    # refresh, so if we do not, let's just update the id token
+                    # expiry field and reuse the existing ID Token.
+                    id_token['exp'] = time.time() + credentials.expires_in
                 self.credentials_store[id_token['sub']] = credentials.to_json()
                 self._set_cookie_id_token(id_token)
             except AccessTokenRefreshError:
