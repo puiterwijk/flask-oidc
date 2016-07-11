@@ -1,5 +1,6 @@
 import os.path
 import io
+import sys
 
 from setuptools import setup
 
