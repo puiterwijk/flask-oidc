@@ -56,7 +56,7 @@ def main():
         print('Output file exists. Please provide other filename')
         return 1
 
-    if arg.debug:
+    if args.debug:
         LOG.setLevel(logging.DEBUG)
 
     redirect_uris = ['%s/oidc_callback' % args.application_url]
