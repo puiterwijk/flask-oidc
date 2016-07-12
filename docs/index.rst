@@ -34,7 +34,7 @@ To integrate Flask-OpenID into your application you need to create an
 instance of the :class:`OpenID` object first::
 
     from flask.ext.oidc import OpenIDConnect
-    oidc = OpenID(app)
+    oidc = OpenIDConnect(app)
 
 
 Alternatively the object can be instantiated without the application in
