@@ -62,7 +62,11 @@ def check_redirect_uris(uris, client_type=None):
                 raise ValueError('http://localhost url with web client')
             client_type = 'native'
         else:
-            raise ValueError('Invalid uri provided: %s' % uri)
+            if (uri.startswith('http://') and 
+                    not uri.startswith('http://localhost')):
+                raise ValueError('http:// url with non-localhost is illegal')
+            else:
+                raise ValueError('Invalid uri provided: %s' % uri)
 
     return client_type
 
