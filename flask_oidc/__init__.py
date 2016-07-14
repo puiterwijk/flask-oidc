@@ -98,9 +98,7 @@ class OpenIDConnect(object):
         app.config.setdefault('OIDC_ID_TOKEN_COOKIE_NAME', 'oidc_id_token')
         app.config.setdefault('OIDC_ID_TOKEN_COOKIE_TTL', 7 * 86400)  # 7 days
         # should ONLY be turned off for local debugging
-        app.config.setdefault('OIDC_COOKIE_SECURE',
-                              app.config.get('OIDC_ID_TOKEN_COOKIE_SECURE',
-                                             True))
+        app.config.setdefault('OIDC_COOKIE_SECURE', True)
         app.config.setdefault('OIDC_VALID_ISSUERS',
                               (self.client_secrets.get('issuer') or
                                GOOGLE_ISSUERS))
@@ -274,13 +272,21 @@ class OpenIDConnect(object):
         """
         Set a new ID token cookie if the ID token has changed.
         """
+        # This means that if either the new or the old are False, we set
+        # insecure cookies.
+        # We don't define OIDC_ID_TOKEN_COOKIE_SECURE in init_app, because we
+        # don't want people to find it easily.
+        cookie_secure = (current_app.config['OIDC_COOKIE_SECURE'] and
+                         current_app.config.get('OIDC_ID_TOKEN_COOKIE_SECURE',
+                                                True))
+
         if getattr(g, 'oidc_id_token_dirty', False):
             if g.oidc_id_token:
                 signed_id_token = self.cookie_serializer.dumps(g.oidc_id_token)
                 response.set_cookie(
                     current_app.config['OIDC_ID_TOKEN_COOKIE_NAME'],
                     signed_id_token,
-                    secure=current_app.config['OIDC_COOKIE_SECURE'],
+                    secure=cookie_secure,
                     httponly=True,
                     max_age=current_app.config['OIDC_ID_TOKEN_COOKIE_TTL'])
             else:
@@ -288,7 +294,7 @@ class OpenIDConnect(object):
                 response.set_cookie(
                     current_app.config['OIDC_ID_TOKEN_COOKIE_NAME'],
                     '',
-                    secure=current_app.config['OIDC_COOKIE_SECURE'],
+                    secure=cookie_secure,
                     httponly=True,
                     expires=0)
         return response
