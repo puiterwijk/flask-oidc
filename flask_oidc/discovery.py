@@ -23,7 +23,8 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import httplib2
-import json
+
+from _flask_oidc import _json_loads
 
 
 # OpenID Connect Discovery 1.0
@@ -40,4 +41,4 @@ def discover_OP_information(OP_uri):
     """
     _, content = httplib2.Http().request(
         '%s/.well-known/openid-configuration' % OP_uri)
-    return json.loads(content)
+    return _json_loads(content)

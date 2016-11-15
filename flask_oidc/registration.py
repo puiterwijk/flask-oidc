@@ -25,6 +25,8 @@
 import json
 import httplib2
 
+from flask_oidc import _json_loads
+
 
 def check_redirect_uris(uris, client_type=None):
     """
@@ -119,7 +121,7 @@ def register_client(provider_info, redirect_uris):
         provider_info['registration_endpoint'], 'POST',
         json.dumps(submit_info), headers=headers)
 
-    client_info = json.loads(content)
+    client_info = _json_loads(content)
 
     if 'error' in client_info:
         raise Exception('Error occured during registration: %s (%s)'

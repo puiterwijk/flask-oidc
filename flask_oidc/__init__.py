@@ -46,6 +46,11 @@ __all__ = ['OpenIDConnect', 'MemoryCredentials']
 logger = logging.getLogger(__name__)
 
 
+def _json_loads(content):
+    if not isinstance(content, str):
+        content = content.decode('utf-8')
+    return json.loads(content)
+
 class MemoryCredentials(dict):
     """
     Non-persistent local credentials store.
@@ -88,8 +93,8 @@ class OpenIDConnect(object):
         :type app: Flask
         """
         # Load client_secrets.json to pre-initialize some configuration
-        secrets = json.loads(open(app.config['OIDC_CLIENT_SECRETS'],
-                                  'r').read())
+        secrets = _json_loads(open(app.config['OIDC_CLIENT_SECRETS'],
+                                   'r').read())
         self.client_secrets = list(secrets.values())[0]
 
         # Set some default configuration options
@@ -228,7 +233,7 @@ class OpenIDConnect(object):
                                                             access_token}))
 
         logger.debug('Retrieved user info: %s' % content)
-        info = json.loads(content)
+        info = _json_loads(content)
 
         g._oidc_userinfo = info
 
@@ -525,7 +530,7 @@ class OpenIDConnect(object):
         try:
             session_csrf_token = session.pop('oidc_csrf_token')
 
-            state = json.loads(request.args['state'])
+            state = _json_loads(request.args['state'])
             csrf_token = state['csrf_token']
             destination = state['destination']
 
@@ -702,4 +707,4 @@ class OpenIDConnect(object):
             self.client_secrets['token_introspection_uri'], 'POST',
             urlencode(request), headers=headers)
         # TODO: Cache this reply
-        return json.loads(content)
+        return _json_loads(content)
