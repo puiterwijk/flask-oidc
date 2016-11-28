@@ -110,6 +110,7 @@ class OpenIDConnect(object):
         app.config.setdefault('OIDC_CLOCK_SKEW', 60)  # 1 minute
         app.config.setdefault('OIDC_REQUIRE_VERIFIED_EMAIL', False)
         app.config.setdefault('OIDC_OPENID_REALM', None)
+        app.config.setdefault('OIDC_USER_INFO_ENABLED', False)
         # Configuration for resource servers
         app.config.setdefault('OIDC_RESOURCE_CHECK_AUD', True)
 
@@ -185,7 +186,7 @@ class OpenIDConnect(object):
         for field in fields:
             if access_token is None and field in g.oidc_id_token:
                 info[field] = g.oidc_id_token[field]
-            else:
+            elif current_app.config['OIDC_USER_INFO_ENABLED']:
                 # This was not in the id_token. Let's get user information
                 if all_info is None:
                     all_info = self._retrieve_userinfo(access_token)
