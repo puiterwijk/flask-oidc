@@ -110,7 +110,7 @@ class OpenIDConnect(object):
         app.config.setdefault('OIDC_CLOCK_SKEW', 60)  # 1 minute
         app.config.setdefault('OIDC_REQUIRE_VERIFIED_EMAIL', False)
         app.config.setdefault('OIDC_OPENID_REALM', None)
-        app.config.setdefault('OIDC_USER_INFO_ENABLED', False)
+        app.config.setdefault('OIDC_USER_INFO_ENABLED', True)
         # Configuration for resource servers
         app.config.setdefault('OIDC_RESOURCE_CHECK_AUD', True)
 
