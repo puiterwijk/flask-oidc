@@ -117,9 +117,12 @@ def register_client(provider_info, redirect_uris):
 
     headers = {'Content-type': 'application/json'}
 
-    _, content = httplib2.Http().request(
+    resp, content = httplib2.Http().request(
         provider_info['registration_endpoint'], 'POST',
         json.dumps(submit_info), headers=headers)
+
+    if int(resp['status']) >= 400:
+        raise Exception('Error: the server returned HTTP ' + resp['status'])
 
     client_info = _json_loads(content)
 
