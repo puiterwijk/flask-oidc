@@ -111,13 +111,15 @@ class OpenIDConnect(object):
         app.config.setdefault('OIDC_REQUIRE_VERIFIED_EMAIL', False)
         app.config.setdefault('OIDC_OPENID_REALM', None)
         app.config.setdefault('OIDC_USER_INFO_ENABLED', True)
+        app.config.setdefault('OIDC_CALLBACK_ROUTE', '/oidc_callback')
+        app.config.setdefault('OVERWRITE_REDIRECT_URI', False)
         # Configuration for resource servers
         app.config.setdefault('OIDC_RESOURCE_SERVER_ONLY', False)
         app.config.setdefault('OIDC_RESOURCE_CHECK_AUD', True)
 
         # register callback route and cookie-setting decorator
         if not app.config['OIDC_RESOURCE_SERVER_ONLY']:
-            app.route('/oidc_callback')(self._oidc_callback)
+            app.route(app.config['OIDC_CALLBACK_ROUTE'])(self._oidc_callback)
             app.before_request(self._before_request)
             app.after_request(self._after_request)
 
@@ -417,7 +419,11 @@ class OpenIDConnect(object):
         :return:
         """
         flow = copy(self.flow)
-        flow.redirect_uri = url_for('_oidc_callback', _external=True)
+        redirect_uri = current_app.config['OVERWRITE_REDIRECT_URI']
+        if not redirect_uri:
+            flow.redirect_uri = url_for('_oidc_callback', _external=True)
+        else:
+            flow.redirect_uri = redirect_uri
         return flow
 
     def redirect_to_auth_server(self, destination):
