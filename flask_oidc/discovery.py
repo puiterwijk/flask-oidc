@@ -24,7 +24,7 @@
 
 import httplib2
 
-from _flask_oidc import _json_loads
+from flask_oidc import _json_loads
 
 
 # OpenID Connect Discovery 1.0
