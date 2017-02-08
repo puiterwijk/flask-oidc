@@ -196,4 +196,7 @@ def test_api_token():
 
     # Test with token for another audience
     resp = test_client.get('/api?access_token=some_elses_token')
+    assert resp.status_code == 200, 'Token should be accepted'
+    test_client.application.config['OIDC_RESOURCE_CHECK_AUD'] = True
+    resp = test_client.get('/api?access_token=some_elses_token')
     assert resp.status_code == 401, 'Token should be refused'

@@ -716,7 +716,7 @@ class OpenIDConnect(object):
                     token = request.args['access_token']
 
                 validity = self.validate_token(token, scopes_required)
-                if (validity is True) or not require_token:
+                if (validity is True) or (not require_token):
                     return view_func(*args, **kwargs)
                 else:
                     return (json.dumps(
