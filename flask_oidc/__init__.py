@@ -115,7 +115,7 @@ class OpenIDConnect(object):
         app.config.setdefault('OVERWRITE_REDIRECT_URI', False)
         # Configuration for resource servers
         app.config.setdefault('OIDC_RESOURCE_SERVER_ONLY', False)
-        app.config.setdefault('OIDC_RESOURCE_CHECK_AUD', True)
+        app.config.setdefault('OIDC_RESOURCE_CHECK_AUD', False)
 
         # register callback route and cookie-setting decorator
         if not app.config['OIDC_RESOURCE_SERVER_ONLY']:

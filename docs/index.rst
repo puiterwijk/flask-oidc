@@ -114,6 +114,85 @@ For example, for Google, you will need to visit `Google API credentials manageme
 <https://console.developers.google.com/apis/credentials?project=_>`_.
 
 
+Settings reference
+-------------------
+
+This is a list of all settings supported in the current release.
+
+  OIDC_SCOPES
+    A python list with the scopes that should be requested. This impacts the
+    information available in the UserInfo field and what the token can be used
+    for. Please check your identity provider's documentation for valid values.
+    Defaults to ['openid', 'email'].
+
+  OIDC_GOOGLE_APPS_DOMAIN
+    The Google Apps domain that must be used to login to this application.
+    Defaults to None, which means this check is skipped and the user can login
+    with any Google account.
+
+  OIDC_ID_TOKEN_COOKIE_NAME
+    Name of the cookie used to store the users' login state. Defaults to
+    "oidc_id_token".
+
+  OIDC_ID_TOKEN_COOKIE_TTL
+    Integer telling how long the login state of the user remains valid.
+    Defaults to 7 days.
+
+  OIDC_COOKIE_SECURE
+    Boolean indicating whether the cookie should be sent with the secure flag
+    enabled. This means that a client (browser) will only send the cookie over
+    an https connection. *Do NOT disable this in production please.*
+    Defaults to True, indicating the cookie is marked as secure.
+
+  OIDC_VALID_ISSUERS
+    The token issuer that is accepted. Please check your Identity Providers
+    documentation for the correct value.
+    Defaults to the value of "issuer" in client_secrets, or the Google issuer
+    if not found.
+
+  OIDC_CLOCK_SKEW
+    Number of seconds of clock skew allowed when checking the "don't use
+    before" and "don't use after" values for tokens.
+    Defaults to sixty seconds (one minute).
+
+  OIDC_REQUIRE_VERIFIED_EMAIL
+    Boolean indicating whether the Identity Provider needs to mark the email
+    as "verified".
+    Defaults to False.
+
+  OIDC_OPENID_REALM
+    String passed to the OpenID Connect provider to ask for the old OpenID
+    identity for users. This helps when migrating from OpenID 2.0 to OpenID
+    Connect because the Identity Provider will also add the OpenID 2.0 identity
+    so you can tie them together.
+    Defaults to None.
+
+  OIDC_USER_INFO_ENABLED
+    Boolean whether to get user information from the UserInfo endpoint provided
+    by the Identity Provider in addition to the token information.
+    Defaults to True.
+
+  OIDC_CALLBACK_ROUTE
+    URL relative to the web root to indicate where the oidc_callback url is
+    mounted on.
+    Defaults to /oidc_callback.
+
+  OVERWRITE_REDIRECT_URI
+    URL to use as return url when passing to the Identity Provider. To be used
+    when Flask could not detect the correct hostname, scheme or path to your
+    application.
+    Defaults to False (disabled).
+
+  OIDC_RESOURCE_SERVER_ONLY
+    Boolean whether to disable the OpenID Client parts. You can enable this
+    in applications where you only use the resource server parts (accept_token)
+    and will skip checking for any cookies.
+
+  OIDC_RESOURCE_CHECK_AUD
+    Boolean to indicate whether the current application needs to be the
+    "audience" of tokens passed.
+    Defaults to False.
+
 
 API References
 --------------
