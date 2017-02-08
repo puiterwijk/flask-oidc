@@ -254,11 +254,15 @@ class OpenIDConnect(object):
 
     def _get_cookie_id_token(self):
         try:
-            id_token_cookie = request.cookies[current_app.config[
-                'OIDC_ID_TOKEN_COOKIE_NAME']]
+            id_token_cookie = request.cookies.get(current_app.config[
+                'OIDC_ID_TOKEN_COOKIE_NAME'])
+            if not id_token_cookie:
+                # Do not error if we were unable to get the cookie.
+                # The user can debug this themselves.
+                return None
             return self.cookie_serializer.loads(id_token_cookie)
-        except (KeyError, SignatureExpired):
-            logger.debug("Missing or invalid ID token cookie", exc_info=True)
+        except SignatureExpired:
+            logger.debug("Invalid ID token cookie", exc_info=True)
             return None
 
     def set_cookie_id_token(self, id_token):
