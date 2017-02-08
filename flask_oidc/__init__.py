@@ -112,12 +112,14 @@ class OpenIDConnect(object):
         app.config.setdefault('OIDC_OPENID_REALM', None)
         app.config.setdefault('OIDC_USER_INFO_ENABLED', True)
         # Configuration for resource servers
+        app.config.setdefault('OIDC_RESOURCE_SERVER_ONLY', False)
         app.config.setdefault('OIDC_RESOURCE_CHECK_AUD', True)
 
         # register callback route and cookie-setting decorator
-        app.route('/oidc_callback')(self._oidc_callback)
-        app.before_request(self._before_request)
-        app.after_request(self._after_request)
+        if not app.config['OIDC_RESOURCE_SERVER_ONLY']:
+            app.route('/oidc_callback')(self._oidc_callback)
+            app.before_request(self._before_request)
+            app.after_request(self._after_request)
 
         # Initialize oauth2client
         self.flow = flow_from_clientsecrets(
