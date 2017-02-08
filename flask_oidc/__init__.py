@@ -613,10 +613,83 @@ class OpenIDConnect(object):
         self._set_cookie_id_token(None)
 
     # Below here is for resource servers to validate tokens
+    def validate_token(self, token, scopes_required=None):
+        """
+        This function can be used to validate tokens.
+
+        Note that this only works if a token introspection url is configured,
+        as that URL will be queried for the validity and scopes of a token.
+
+        :param scopes_required: List of scopes that are required to be
+            granted by the token before returning True.
+        :type scopes_required: list
+
+        :returns: True if the token was valid and contained the required
+            scopes. A string if an error occured.
+        :rtype: Boolean or String
+
+        .. versionadded:: 1.1
+        """
+        if scopes_required is None:
+            scopes_required = []
+        scopes_required = set(scopes_required)
+
+        token_info = None
+        valid_token = False
+        has_required_scopes = False
+        if token:
+            try:
+                token_info = self._get_token_info(token)
+            except Exception as ex:
+                token_info = {'active': False}
+                logger.error('ERROR: Unable to get token info')
+                logger.error(str(ex))
+
+            valid_token = token_info['active']
+
+            if 'aud' in token_info and \
+                    current_app.config['OIDC_RESOURCE_CHECK_AUD']:
+                valid_audience = False
+                aud = token_info['aud']
+                clid = self.client_secrets['client_id']
+                if isinstance(aud, list):
+                    valid_audience = clid in aud
+                else:
+                    valid_audience = clid == aud
+
+                if not valid_audience:
+                    logger.error('Refused token because of invalid '
+                                 'audience')
+                    valid_token = False
+
+            if valid_token:
+                token_scopes = token_info.get('scope', '').split(' ')
+            else:
+                token_scopes = []
+            has_required_scopes = scopes_required.issubset(
+                set(token_scopes))
+
+            if not has_required_scopes:
+                logger.debug('Token missed required scopes')
+
+        if (valid_token and has_required_scopes):
+            g.oidc_token_info = token_info
+            return True
+
+        if not valid_token:
+            return 'Token required but invalid'
+        elif not has_required_scopes:
+            return 'Token does not have required scopes'
+        else:
+            return 'Something went wrong checking your token'
+
     def accept_token(self, require_token=False, scopes_required=None):
         """
         Use this to decorate view functions that should accept OAuth2 tokens,
         this will most likely apply to API functions.
+
+        Tokens are accepted as part of the query URL (access_token value) or
+        a POST form value (access_token).
 
         Note that this only works if a token introspection url is configured,
         as that URL will be queried for the validity and scopes of a token.
@@ -632,10 +705,6 @@ class OpenIDConnect(object):
 
         .. versionadded:: 1.0
         """
-        if scopes_required is None:
-            scopes_required = []
-        scopes_required = set(scopes_required)
-
         def wrapper(view_func):
             @wraps(view_func)
             def decorated(*args, **kwargs):
@@ -646,64 +715,15 @@ class OpenIDConnect(object):
                 elif 'access_token' in request.args:
                     token = request.args['access_token']
 
-                token_info = None
-                valid_token = False
-                has_required_scopes = False
-                if token:
-                    try:
-                        token_info = self._get_token_info(token)
-                    except Exception as ex:
-                        token_info = {'active': False}
-                        logger.error('ERROR: Unable to get token info')
-                        logger.error(str(ex))
-                    valid_token = token_info['active']
-
-                    if 'aud' in token_info and \
-                            current_app.config['OIDC_RESOURCE_CHECK_AUD']:
-                        valid_audience = False
-                        aud = token_info['aud']
-                        clid = self.client_secrets['client_id']
-                        if isinstance(aud, list):
-                            valid_audience = clid in aud
-                        else:
-                            valid_audience = clid == aud
-
-                        if not valid_audience:
-                            logger.error('Refused token because of invalid '
-                                         'audience')
-                            valid_token = False
-
-                    if valid_token:
-                        token_scopes = token_info.get('scope', '').split(' ')
-                    else:
-                        token_scopes = []
-                    has_required_scopes = scopes_required.issubset(
-                        set(token_scopes))
-
-                    if not has_required_scopes:
-                        logger.debug('Token missed required scopes')
-
-                if not require_token or (valid_token and has_required_scopes):
-                    g.oidc_token_info = token_info
+                validity = self.validate_token(token, scopes_required)
+                if (validity is True) or not require_token:
                     return view_func(*args, **kwargs)
-
-                if not valid_token:
-                    return (json.dumps(
-                        {'error': 'invalid_token',
-                         'error_description': 'Token required but invalid'}),
-                        401, {'WWW-Authenticate': 'Bearer'})
-                elif not has_required_scopes:
-                    return (json.dumps(
-                        {'error': 'invalid_token',
-                         'error_description':
-                             'Token does not have required scopes'}),
-                        401, {'WWW-Authenticate': 'Bearer'})
                 else:
                     return (json.dumps(
                         {'error': 'invalid_token',
-                         'error_description':
-                            'Something went wrong checking your token'}),
+                         'error_description': validity}),
                         401, {'WWW-Authenticate': 'Bearer'})
+
             return decorated
         return wrapper
 
