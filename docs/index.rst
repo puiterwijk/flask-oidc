@@ -93,6 +93,9 @@ issued by the OpenID Connect provider, just decorate those API functions with
     def my_api():
         return json.dumps('Welcome %s' % g.oidc_token_info['sub'])
 
+If you are only using this part of flask-oidc, it is suggested to set the
+configuration option `OIDC_RESOURCE_SERVER_ONLY` (new in 1.0.5).
+
 
 Registration
 ------------
