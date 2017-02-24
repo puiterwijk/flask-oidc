@@ -233,9 +233,11 @@ class OpenIDConnect(object):
             resp, content = http.request(self.client_secrets['userinfo_uri'])
         else:
             # We have been manually overriden with an access token
-            resp, content = http.request(self.client_secrets['userinfo_uri'],
-                                         "POST", urlencode({"access_token":
-                                                            access_token}))
+            resp, content = http.request(
+                self.client_secrets['userinfo_uri'],
+                "POST",
+                body=urlencode({"access_token": access_token}),
+                headers={'Content-Type': 'application/x-www-form-urlencoded'})
 
         logger.debug('Retrieved user info: %s' % content)
         info = _json_loads(content)
