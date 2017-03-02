@@ -157,46 +157,53 @@ def test_refresh():
             "App should have tried to refresh credentials"
 
 
-@patch('httplib2.Http', MockHttp)
-def test_api_token():
+def _check_api_token_handling(api_path):
     """
     Test API token acceptance.
     """
     test_client = make_test_client()
 
     # Test without a token
-    resp = test_client.get('/api')
+    resp = test_client.get(api_path)
     assert resp.status_code == 401, "Token should be required"
     resp = json.loads(resp.get_data().decode('utf-8'))
     assert resp['error'] == 'invalid_token', "Token should be requested"
 
     # Test with invalid token
-    resp = test_client.get('/api?access_token=invalid_token')
+    resp = test_client.get(api_path + '?access_token=invalid_token')
     assert resp.status_code == 401, 'Token should be rejected'
 
     # Test with query token
-    resp = test_client.get('/api?access_token=query_token')
+    resp = test_client.get(api_path + '?access_token=query_token')
     assert resp.status_code == 200, 'Token should be accepted'
     resp = json.loads(resp.get_data().decode('utf-8'))
     assert resp['token']['sub'] == 'valid_sub'
 
     # Test with post token
-    resp = test_client.post('/api', data={'access_token': 'post_token'})
+    resp = test_client.post(api_path, data={'access_token': 'post_token'})
     assert resp.status_code == 200, 'Token should be accepted'
 
     # Test with insufficient token
-    resp = test_client.post('/api?access_token=insufficient_token')
+    resp = test_client.post(api_path + '?access_token=insufficient_token')
     assert resp.status_code == 401, 'Token should be refused'
     resp = json.loads(resp.get_data().decode('utf-8'))
     assert resp['error'] == 'invalid_token'
 
     # Test with multiple audiences
-    resp = test_client.get('/api?access_token=multi_aud_token')
+    resp = test_client.get(api_path + '?access_token=multi_aud_token')
     assert resp.status_code == 200, 'Token should be accepted'
 
     # Test with token for another audience
-    resp = test_client.get('/api?access_token=some_elses_token')
+    resp = test_client.get(api_path + '?access_token=some_elses_token')
     assert resp.status_code == 200, 'Token should be accepted'
     test_client.application.config['OIDC_RESOURCE_CHECK_AUD'] = True
-    resp = test_client.get('/api?access_token=some_elses_token')
+    resp = test_client.get(api_path + '?access_token=some_elses_token')
     assert resp.status_code == 401, 'Token should be refused'
+
+@patch('httplib2.Http', MockHttp)
+def test_api_token():
+    _check_api_token_handling('/api')
+
+@patch('httplib2.Http', MockHttp)
+def test_api_token_with_external_rendering():
+    _check_api_token_handling('/external_api')
