@@ -685,7 +685,8 @@ class OpenIDConnect(object):
         else:
             return 'Something went wrong checking your token'
 
-    def accept_token(self, require_token=False, scopes_required=None):
+    def accept_token(self, require_token=False, scopes_required=None,
+                           render_errors=json.dumps):
         """
         Use this to decorate view functions that should accept OAuth2 tokens,
         this will most likely apply to API functions.
@@ -704,9 +705,17 @@ class OpenIDConnect(object):
             granted by the token before being allowed to call the protected
             function.
         :type scopes_required: list
+        :param render_errors: Conversion function to render error objects
+            as API responses. Defaults to json.dumps. Set to None to pass
+            the error object back unmodified for later rendering.
+        :type render_errors: callback(obj) or None
 
         .. versionadded:: 1.0
         """
+        if render_errors is None:
+            def render_errors(obj):
+                return obj
+
         def wrapper(view_func):
             @wraps(view_func)
             def decorated(*args, **kwargs):
@@ -721,7 +730,7 @@ class OpenIDConnect(object):
                 if (validity is True) or (not require_token):
                     return view_func(*args, **kwargs)
                 else:
-                    return (json.dumps(
+                    return (render_errors(
                         {'error': 'invalid_token',
                          'error_description': validity}),
                         401, {'WWW-Authenticate': 'Bearer'})
