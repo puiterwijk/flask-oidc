@@ -114,6 +114,53 @@ For example, for Google, you will need to visit `Google API credentials manageme
 <https://console.developers.google.com/apis/credentials?project=_>`_.
 
 
+Manual client registration
+--------------------------
+
+If your identity provider does not offer Dynamic Registration (and you can't
+push them to do so, as it would make it a lot simpler!), you might need to know
+the following details:
+
+  Grant type
+    authorization_code (Authorization Code flow)
+
+  Response type
+    Code
+
+  Token endpoint auth metod
+    client_secret_post
+
+  Redirect URI
+    <APPLICATION_URL>/oidc_callback
+
+
+You will also need to manually craft your client_secrets.json.
+This is just a json document, with everything under a top-level "web" key.
+Underneath that top-level key, you have the following keys:
+
+  client_id
+    Client ID issued by your IdP
+
+  client_secret
+    Client secret belonging to the registered ID
+
+  auth_uri
+    The Identity Provider's authorization endpoint url
+
+  token_uri
+    The Identity Provider's token endpoint url
+    (Optional, used for resource server)
+
+  userinfo_uri
+    The Identity Provider's userinfo url
+
+  issuer
+    The "issuer" value for the Identity Provider
+
+  redirect_uris
+    A list of the registered redirect uris
+
+
 Settings reference
 -------------------
 
