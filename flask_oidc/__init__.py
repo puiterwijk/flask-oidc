@@ -117,6 +117,10 @@ class OpenIDConnect(object):
         app.config.setdefault('OIDC_RESOURCE_SERVER_ONLY', False)
         app.config.setdefault('OIDC_RESOURCE_CHECK_AUD', False)
 
+        # We use client_secret_post, because that's what the Google
+        # oauth2client library defaults to
+        app.config.setdefault('OIDC_INTROSPECTION_AUTH_METHOD', 'client_secret_post')
+
         # register callback route and cookie-setting decorator
         if not app.config['OIDC_RESOURCE_SERVER_ONLY']:
             app.route(app.config['OIDC_CALLBACK_ROUTE'])(self._oidc_callback)
@@ -647,7 +651,7 @@ class OpenIDConnect(object):
                 logger.error('ERROR: Unable to get token info')
                 logger.error(str(ex))
 
-            valid_token = token_info['active']
+            valid_token = token_info.get('active', False)
 
             if 'aud' in token_info and \
                     current_app.config['OIDC_RESOURCE_CHECK_AUD']:
@@ -711,7 +715,8 @@ class OpenIDConnect(object):
             @wraps(view_func)
             def decorated(*args, **kwargs):
                 token = None
-                # TODO: Accept Authorization header
+                if 'Authorization' in request.headers and request.headers['Authorization'].startswith('Bearer '):
+                    token = request.headers['Authorization'].split(maxsplit=1)[1].strip()
                 if 'access_token' in request.form:
                     token = request.form['access_token']
                 elif 'access_token' in request.args:
@@ -733,10 +738,19 @@ class OpenIDConnect(object):
         # We hardcode to use client_secret_post, because that's what the Google
         # oauth2client library defaults to
         request = {'token': token,
-                   'token_type_hint': 'Bearer',
-                   'client_id': self.client_secrets['client_id'],
-                   'client_secret': self.client_secrets['client_secret']}
+                   'token_type_hint': 'Bearer'}
         headers = {'Content-type': 'application/x-www-form-urlencoded'}
+
+        auth_method = current_app.config['OIDC_INTROSPECTION_AUTH_METHOD'] 
+        if (auth_method == 'client_secret_basic'):
+            basic_auth_string = '%s:%s' % (self.client_secrets['client_id'], self.client_secrets['client_secret'])
+            basic_auth_bytes = bytearray(basic_auth_string, 'utf-8')
+            headers['Authorization'] = 'Basic %s' % b64encode(basic_auth_bytes)
+        elif (auth_method == 'bearer'):
+            headers['Authorization'] = 'Bearer %s' % token
+        elif (auth_method == 'client_secret_post'):
+            request['client_id'] = self.client_secrets['client_id']
+            request['client_secret'] = self.client_secrets['client_secret']
 
         resp, content = httplib2.Http().request(
             self.client_secrets['token_introspection_uri'], 'POST',
