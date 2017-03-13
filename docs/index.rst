@@ -240,6 +240,11 @@ This is a list of all settings supported in the current release.
     "audience" of tokens passed.
     Defaults to False.
 
+  OIDC_INTROSPECTION_AUTH_METHOD
+    String that sets the authentication method used when communicating with
+    the token_introspection_uri.  Valid values are 'client_secret_post',
+    'client_secret_basic', or 'bearer'.  Defaults to 'client_secret_post'.
+
 
 API References
 --------------
