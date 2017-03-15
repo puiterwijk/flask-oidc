@@ -30,6 +30,7 @@ from base64 import b64encode
 import time
 from copy import copy
 import logging
+import urllib
 from warnings import warn
 import calendar
 
@@ -453,8 +454,9 @@ class OpenIDConnect(object):
             'csrf_token': csrf_token,
             'destination': destination,
         }
+        json_state = json.dumps(state)
         extra_params = {
-            'state': json.dumps(state),
+            'state': urllib.quote(json_state)
         }
         if current_app.config['OIDC_GOOGLE_APPS_DOMAIN']:
             extra_params['hd'] = current_app.config['OIDC_GOOGLE_APPS_DOMAIN']
