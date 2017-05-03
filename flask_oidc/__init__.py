@@ -656,7 +656,8 @@ class OpenIDConnect(object):
                 logger.error('ERROR: Unable to get token info')
                 logger.error(str(ex))
 
-            valid_token = token_info.get('active', False)
+            # determine validity of token by UserInfo endpoint data or by checking for 'sub' field in JWT
+            valid_token = token_info.get('sub', None) is not None
 
             if 'aud' in token_info and \
                     current_app.config['OIDC_RESOURCE_CHECK_AUD']:
