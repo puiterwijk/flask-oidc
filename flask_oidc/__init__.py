@@ -118,6 +118,9 @@ class OpenIDConnect(object):
         app.config.setdefault('OIDC_RESOURCE_SERVER_ONLY', False)
         app.config.setdefault('OIDC_RESOURCE_CHECK_AUD', False)
 
+        # keep old default: verify via introspection endpoint. alternative is 'jwt'
+        app.config.setdefault('OIDC_TOKEN_VERIFY_METHOD', 'introspection')
+
         # We use client_secret_post, because that's what the Google
         # oauth2client library defaults to
         app.config.setdefault('OIDC_INTROSPECTION_AUTH_METHOD', 'client_secret_post')
@@ -629,7 +632,7 @@ class OpenIDConnect(object):
         This function can be used to validate tokens.
 
         Note that this only works if a token introspection url is configured,
-        as that URL will be queried for the validity and scopes of a token.
+        as that URL will be queried for the validity and scopes of a token OR if OIDC_TOKEN_VERIFY_METHOD is set to 'jwt'.
 
         :param scopes_required: List of scopes that are required to be
             granted by the token before returning True.
@@ -658,7 +661,7 @@ class OpenIDConnect(object):
                 return str(ex)
 
             # determine validity of token by UserInfo endpoint data or by checking for 'sub' field in JWT
-            valid_token = token_info.get('sub', None) is not None
+            valid_token = token_info.get('sub') is not None
 
             if 'aud' in token_info and \
                     current_app.config['OIDC_RESOURCE_CHECK_AUD']:
@@ -749,7 +752,7 @@ class OpenIDConnect(object):
         return wrapper
 
     def _get_token_info(self, token):
-        verify_method = current_app.config['OIDC_VERIFY_METHOD']
+        verify_method = current_app.config['OIDC_TOKEN_VERIFY_METHOD']
         if verify_method == 'introspection':
             return self._verify_introspection(token)
         elif verify_method == 'jwt':
@@ -810,6 +813,7 @@ class OpenIDConnect(object):
 
     def _update_jwt_keys(self):
         # update local pub key cache for JWT signature verification
+        # https://tools.ietf.org/html/rfc7517
         resp, content = httplib2.Http().request(self.client_secrets['jwks_uri'], 'GET')
 
         d = {}
