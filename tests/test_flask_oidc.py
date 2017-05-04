@@ -11,7 +11,7 @@ except ImportError:
 from six.moves.urllib.parse import urlsplit, parse_qs, urlencode
 from nose.tools import nottest
 
-from .app import create_app
+from .app import create_app, create_jwt_auth_app
 
 
 last_request = None
@@ -73,8 +73,34 @@ class MockHttp(object):
                 token_info['sub'] = 'valid_sub'
                 token_info['aud'] = 'TheirClient'
             return MockHttpResponse(), json.dumps(token_info)
+        elif path == 'https://test/jwks':
+            # cert data converted from https://jwt.io/#debugger
+
+            cert_value = """MIIC/zCCAeegAwIBAgIBATANBgkqhkiG9w0BAQUFADAaMQswCQYDVQQGEwJVUzELMAkGA1UE
+CgwCWjQwHhcNMTMwODI4MTgyODM0WhcNMjMwODI4MTgyODM0WjAaMQswCQYDVQQGEwJVUzEL
+MAkGA1UECgwCWjQwggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQDfdOqotHd55SYO
+0dLz2oXengw/tZ+q3ZmOPeVmMuOMIYO/Cv1wk2U0OK4pug4OBSJPhl09Zs6IwB8NwPOU7EDT
+gMOcQUYB/6QNCI1J7Zm2oLtuchzz4pIb+o4ZAhVprLhRyvqi8OTKQ7kfGfs5Tuwmn1M/0fQk
+fzMxADpjOKNgf0uy6lN6utjdTrPKKFUQNdc6/Ty8EeTnQEwUlsT2LAXCfEKxTn5RlRljDztS
+7Sfgs8VL0FPy1Qi8B+dFcgRYKFrcpsVaZ1lBmXKsXDRu5QR/Rg3f9DRq4GR1sNH8RLY9uApM
+l2SNz+sR4zRPG85R/se5Q06Gu0BUQ3UPm67ETVZLAgMBAAGjUDBOMB0GA1UdDgQWBBQHZPTE
+yQVu/0I/3QWhlTyW7WoTzTAfBgNVHSMEGDAWgBQHZPTEyQVu/0I/3QWhlTyW7WoTzTAMBgNV
+HRMEBTADAQH/MA0GCSqGSIb3DQEBBQUAA4IBAQDHxqJ9y8alTH7agVMWZfic/RbrdvHwyq+I
+OrgDToqyo0w+IZ6BCn9vjv5iuhqu4ForOWDAFpQKZW0DLBJEQy/7/0+9pk2DPhK1XzdOovlS
+rkRt+GcEpGnUXnzACXDBbO0+Wrk+hcjEkQRRK1bW2rknARIEJG9GS+pShP9Bq/0BmNsMepdN
+cBa0z3a5B0fzFyCQoUlX6RTqxRw1h1Qt5F00pfsp7SjXVIvYcewHaNASbto1n5hrSz1VY9hL
+ba11ivL1N4WoWbmzAL6BWabsC2D/MenST2/X6hTKyGXpg3Eg2h3iLvUtwcNny0hRKstc73Jl
+9xR3qXfXKJH0ThTlq0gq"""
+
+            return MockHttpResponse(), json.dumps({'keys': [{'kid': '1234', 'kty': 'RSA', 'use':'sig', 'x5c': [cert_value]}]})
         else:
             raise Exception('Non-recognized path %s requested' % path)
+
+class MockTime(Mock):
+    def __init__(self, *args, **kwargs):
+        Mock.__init__(self, *args, **kwargs)
+        from datetime import datetime
+        self.return_value = time.mktime(datetime(year=2017, month=5, day=4, hour=11, minute=4, second=0).timetuple())
 
 
 @nottest
@@ -207,3 +233,33 @@ def test_api_token():
 @patch('httplib2.Http', MockHttp)
 def test_api_token_with_external_rendering():
     _check_api_token_handling('/external_api')
+
+@patch('httplib2.Http', MockHttp)
+@patch('time.time', MockTime())
+def test_jwt_signature_check():
+    config = {
+        'SECRET_KEY': 'SEEEKRIT',
+        'TESTING': True,
+        'OIDC_TOKEN_VERIFY_METHOD': 'jwt',
+        'OIDC_VALID_ISSUERS': 'https://jwt-idp.example.com',
+        'OIDC_CLIENT_SECRETS': resource_filename(
+            __name__, 'client_secrets.json'),
+    }
+    app = create_jwt_auth_app(config)
+    client = app.test_client()
+    # token from http://kjur.github.io/jsjws/tool_jwt.html
+    # see also: https://mkjwk.org/
+    # token payload:
+    # {
+    #  "iss": "https://jwt-idp.example.com",
+    #  "aud": "MyClient",
+    #  "sub": "mailto:mike@example.com",
+    #  "nbf": 1493887946,
+    #  "exp": 1493891546,
+    #  "iat": 1493887946,
+    #  "jti": "id123456",
+    #  "typ": "https://example.com/register"
+    #}
+    token = 'eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJodHRwczovL2p3dC1pZHAuZXhhbXBsZS5jb20iLCJhdWQiOiJNeUNsaWVudCIsInN1YiI6Im1haWx0bzptaWtlQGV4YW1wbGUuY29tIiwibmJmIjoxNDkzODg3OTQ2LCJleHAiOjE0OTM4OTE1NDYsImlhdCI6MTQ5Mzg4Nzk0NiwianRpIjoiaWQxMjM0NTYiLCJ0eXAiOiJodHRwczovL2V4YW1wbGUuY29tL3JlZ2lzdGVyIn0.Vdv14DkUqf5ZW1_LO7wUVloqUBrAXwwNbSUAnCfIeRw7U9QY061fMpcc4XYo9YRC9KCxiqSsLDA5uSZL4r_E8ozCUsVStxugNiZWEA8t5pZ2njaFPqnYDazInjlDvA8IhbgwAG-HMEoVyK0o48FGQ4d--tzzG6W-nXkSd0Tp6lv35_njxblTIyE_z8Hsol-oGNv4PgjjXSksTk5F3G343y_GPAO23e5JTvxlkjgCOAQ-W_mL1Z21zFuPiiwblcK_P7q75ZH7FOlxd4HD-P9WWiWEt6XkeNwGvuV8PPx8PcNhQrsqAKceTE1T1k_Ibzr-4Tyb1taUJZPV1kMd-_-O5g'
+    resp = client.get('/jwt_auth', headers={'Authorization': 'Bearer {0}'.format(token)})
+    assert resp.status_code == 200, "response code was not 200"

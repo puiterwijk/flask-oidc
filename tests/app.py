@@ -42,3 +42,13 @@ def create_app(config, oidc_overrides=None):
         return rendered_response
     app.route('/external_api', methods=['GET', 'POST'])(externally_rendered_api)
     return app
+
+def create_jwt_auth_app(config):
+    app = Flask(__name__)
+    app.config.update(config)
+    oidc = OpenIDConnect(app)
+
+    jwt_checked = oidc.accept_token(True)(index)
+    app.route('/jwt_auth', methods=['GET'])(jwt_checked)
+
+    return app
