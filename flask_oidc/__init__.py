@@ -26,7 +26,7 @@
 from functools import wraps
 import os
 import json
-from base64 import b64encode
+from base64 import b64encode, b64decode
 import time
 from copy import copy
 import logging
@@ -37,6 +37,7 @@ from six.moves.urllib.parse import urlencode
 from flask import request, session, redirect, url_for, g, current_app
 from oauth2client.client import flow_from_clientsecrets, OAuth2WebServerFlow,\
     AccessTokenRefreshError, OAuth2Credentials
+from oauth2client.crypt import verify_signed_jwt_with_certs
 import httplib2
 from itsdangerous import JSONWebSignatureSerializer, BadSignature, \
     TimedJSONWebSignatureSerializer, SignatureExpired
@@ -117,6 +118,9 @@ class OpenIDConnect(object):
         app.config.setdefault('OIDC_RESOURCE_SERVER_ONLY', False)
         app.config.setdefault('OIDC_RESOURCE_CHECK_AUD', False)
 
+        # keep old default: verify via introspection endpoint. alternative is 'jwt'
+        app.config.setdefault('OIDC_TOKEN_VERIFY_METHOD', 'introspection')
+
         # We use client_secret_post, because that's what the Google
         # oauth2client library defaults to
         app.config.setdefault('OIDC_INTROSPECTION_AUTH_METHOD', 'client_secret_post')
@@ -126,6 +130,10 @@ class OpenIDConnect(object):
             app.route(app.config['OIDC_CALLBACK_ROUTE'])(self._oidc_callback)
             app.before_request(self._before_request)
             app.after_request(self._after_request)
+
+        # load initial set of kwt_keys
+        if self.client_secrets['jwks_uri']:
+            self.jwt_pubkeys = self._update_jwt_keys()
 
         # Initialize oauth2client
         self.flow = flow_from_clientsecrets(
@@ -624,7 +632,7 @@ class OpenIDConnect(object):
         This function can be used to validate tokens.
 
         Note that this only works if a token introspection url is configured,
-        as that URL will be queried for the validity and scopes of a token.
+        as that URL will be queried for the validity and scopes of a token OR if OIDC_TOKEN_VERIFY_METHOD is set to 'jwt'.
 
         :param scopes_required: List of scopes that are required to be
             granted by the token before returning True.
@@ -650,8 +658,10 @@ class OpenIDConnect(object):
                 token_info = {'active': False}
                 logger.error('ERROR: Unable to get token info')
                 logger.error(str(ex))
+                return str(ex)
 
-            valid_token = token_info.get('active', False)
+            # determine validity of token by UserInfo endpoint data or by checking for 'sub' field in JWT
+            valid_token = token_info.get('sub') is not None
 
             if 'aud' in token_info and \
                     current_app.config['OIDC_RESOURCE_CHECK_AUD']:
@@ -742,6 +752,42 @@ class OpenIDConnect(object):
         return wrapper
 
     def _get_token_info(self, token):
+        verify_method = current_app.config['OIDC_TOKEN_VERIFY_METHOD']
+        if verify_method == 'introspection':
+            return self._verify_introspection(token)
+        elif verify_method == 'jwt':
+            return self._verify_jwt(token)
+        else:
+            return {}
+
+    def _verify_jwt(self, token):
+        # verify JWT json web token
+        header = None
+        try:
+            from oauth2client import _helpers
+            jwt = _helpers._to_bytes(token)
+            header_str, payload_str, signature_str = jwt.split(b'.')
+            header = _json_loads(_helpers._urlsafe_b64decode(header_str))
+        except Exception as e:
+            raise Exception('Can\'t parse token as JWT: {0} ({1})'.format(token, e))
+
+        token_type = header.get('typ', None)
+        token_alg = header.get('alg', None)
+        token_kid = header.get('kid', None)
+        #token_x5t = header.get('x5t', None)
+
+        if token_type != 'JWT': raise Exception("token is not a JWT")
+        if not token_alg.startswith('RS'): raise Exception("cannot process token type: '{0}'".format(token_type))
+
+        # update key set if we cn't find key id
+        #TODO: find a way to refresh keys if no kid is given
+        if token_kid is not None and token_kid not in self.jwt_pubkeys:
+            self.jwt_pubkeys = self._update_jwt_keys()
+
+        # don't validate audience here, it will be done in our caller
+        return verify_signed_jwt_with_certs(token, certs=self.jwt_pubkeys, audience=None)
+
+    def _verify_introspection(self, token):
         # We hardcode to use client_secret_post, because that's what the Google
         # oauth2client library defaults to
         request = {'token': token,
@@ -764,3 +810,23 @@ class OpenIDConnect(object):
             urlencode(request), headers=headers)
         # TODO: Cache this reply
         return _json_loads(content)
+
+    def _update_jwt_keys(self):
+        # update local pub key cache for JWT signature verification
+        # https://tools.ietf.org/html/rfc7517
+        resp, content = httplib2.Http().request(self.client_secrets['jwks_uri'], 'GET')
+
+        d = {}
+        from OpenSSL import crypto
+
+        # build new key dictionary, use key IDs as keys
+        for key in _json_loads(content)['keys']:
+            # see https://tools.ietf.org/html/rfc7515#section-4.1.6 x5c value must be DER encoded
+            if key.get('x5c', None) is not None and key['use'] == 'sig':
+                bin_key = b64decode(key['x5c'][0])
+                key_data = crypto.load_certificate(crypto.FILETYPE_ASN1, bin_key) # parse DER data
+                d[key['kid']] = crypto.dump_certificate(crypto.FILETYPE_PEM, key_data)
+            else:
+                raise Exception("ccurrently only validation through 'x5c' parameter is ")
+
+        return d
