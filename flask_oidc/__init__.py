@@ -768,8 +768,8 @@ class OpenIDConnect(object):
             jwt = _helpers._to_bytes(token)
             header_str, payload_str, signature_str = jwt.split(b'.')
             header = _json_loads(_helpers._urlsafe_b64decode(header_str))
-        except:
-            raise Exception('Can\'t parse token as JWT: {0}'.format(token))
+        except Exception as e:
+            raise Exception('Can\'t parse token as JWT: {0} ({1})'.format(token, e))
 
         token_type = header.get('typ', None)
         token_alg = header.get('alg', None)
