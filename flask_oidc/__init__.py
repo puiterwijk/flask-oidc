@@ -722,7 +722,7 @@ class OpenIDConnect(object):
             def decorated(*args, **kwargs):
                 token = None
                 if 'Authorization' in request.headers and request.headers['Authorization'].startswith('Bearer '):
-                    token = request.headers['Authorization'].split(maxsplit=1)[1].strip()
+                    token = request.headers['Authorization'].split(None,1)[1].strip()
                 if 'access_token' in request.form:
                     token = request.form['access_token']
                 elif 'access_token' in request.args:
