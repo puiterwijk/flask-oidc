@@ -60,6 +60,17 @@ class MemoryCredentials(dict):
     pass
 
 
+class DummySecretsCache(object):
+    """
+    oauth2client secrets cache
+    """
+    def __init__(self, client_secrets):
+        self.client_secrets = client_secrets
+
+    def get(self, filename, namespace):
+        return self.client_secrets
+
+
 GOOGLE_ISSUERS = ['accounts.google.com', 'https://accounts.google.com']
 
 
@@ -92,10 +103,9 @@ class OpenIDConnect(object):
         :param app: The application to initialize.
         :type app: Flask
         """
-        # Load client_secrets.json to pre-initialize some configuration
-        secrets = _json_loads(open(app.config['OIDC_CLIENT_SECRETS'],
-                                   'r').read())
+        secrets = self.load_secrets(app)
         self.client_secrets = list(secrets.values())[0]
+        secrets_cache = DummySecretsCache(secrets)
 
         # Set some default configuration options
         app.config.setdefault('OIDC_SCOPES', ['openid', 'email'])
@@ -130,7 +140,8 @@ class OpenIDConnect(object):
         # Initialize oauth2client
         self.flow = flow_from_clientsecrets(
             app.config['OIDC_CLIENT_SECRETS'],
-            scope=app.config['OIDC_SCOPES'])
+            scope=app.config['OIDC_SCOPES'],
+            cache=secrets_cache)
         assert isinstance(self.flow, OAuth2WebServerFlow)
 
         # create signers using the Flask secret key
@@ -144,6 +155,11 @@ class OpenIDConnect(object):
         except KeyError:
             pass
 
+    def load_secrets(self, app):
+        # Load client_secrets.json to pre-initialize some configuration
+        return _json_loads(open(app.config['OIDC_CLIENT_SECRETS'],
+                                   'r').read())
+        
     @property
     def user_loggedin(self):
         """
