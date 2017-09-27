@@ -156,6 +156,9 @@ class OpenIDConnect(object):
         # oauth2client library defaults to
         app.config.setdefault('OIDC_INTROSPECTION_AUTH_METHOD', 'client_secret_post')
 
+        if not 'openid' in app.config['OIDC_SCOPES']:
+            raise ValueError('The value "openid" must be in the OIDC_SCOPES')
+
         # register callback route and cookie-setting decorator
         if not app.config['OIDC_RESOURCE_SERVER_ONLY']:
             app.route(app.config['OIDC_CALLBACK_ROUTE'])(self._oidc_callback)
