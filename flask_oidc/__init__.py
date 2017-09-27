@@ -794,7 +794,7 @@ class OpenIDConnect(object):
         # We hardcode to use client_secret_post, because that's what the Google
         # oauth2client library defaults to
         request = {'token': token,
-                   'token_type_hint': 'Bearer'}
+                   'token_type_hint': 'access_token'}
         headers = {'Content-type': 'application/x-www-form-urlencoded'}
 
         auth_method = current_app.config['OIDC_INTROSPECTION_AUTH_METHOD'] 
