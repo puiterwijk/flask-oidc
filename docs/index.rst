@@ -181,6 +181,9 @@ This is a list of all settings supported in the current release.
     Name of the cookie used to store the users' login state. Defaults to
     "oidc_id_token".
 
+  OIDC_ID_TOKEN_COOKIE_PATH
+    Path under which the login state cookie is stored. Defaults to "/".
+
   OIDC_ID_TOKEN_COOKIE_TTL
     Integer telling how long the login state of the user remains valid.
     Defaults to 7 days.
