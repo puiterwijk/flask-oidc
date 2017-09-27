@@ -499,7 +499,7 @@ class OpenIDConnect(object):
             'destination': destination,
         }
         extra_params = {
-            'state': urlsafe_b64encode(json.dumps(state)),
+            'state': urlsafe_b64encode(json.dumps(state).encode('utf-8')),
         }
         if current_app.config['OIDC_GOOGLE_APPS_DOMAIN']:
             extra_params['hd'] = current_app.config['OIDC_GOOGLE_APPS_DOMAIN']
