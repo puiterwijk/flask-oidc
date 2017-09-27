@@ -8,8 +8,21 @@ from flask import Flask, g
 from flask.ext.oidc import OpenIDConnect
 
 
+oidc = None
+
+
 def index():
     return "too many secrets", 200, {
+        'Content-Type': 'text/plain; charset=utf-8'
+    }
+
+def get_at():
+    return oidc.get_access_token(), 200, {
+        'Content-Type': 'text/plain; charset=utf-8'
+    }
+
+def get_rt():
+    return oidc.get_refresh_token(), 200, {
         'Content-Type': 'text/plain; charset=utf-8'
     }
 
@@ -20,12 +33,16 @@ def api():
     return json.dumps(raw_api())
 
 def create_app(config, oidc_overrides=None):
+    global oidc
+
     app = Flask(__name__)
     app.config.update(config)
     if oidc_overrides is None:
         oidc_overrides = {}
     oidc = OpenIDConnect(app, **oidc_overrides)
     app.route('/')(oidc.check(index))
+    app.route('/at')(oidc.check(get_at))
+    app.route('/rt')(oidc.check(get_rt))
     # Check standalone usage
     rendered = oidc.accept_token(True, ['openid'])(api)
     app.route('/api', methods=['GET', 'POST'])(rendered)

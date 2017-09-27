@@ -133,6 +133,20 @@ def test_signin():
         "Expected redirect to destination "\
         "(unexpected path {location.path})".format(location=r2location)
 
+    # Let's get the at and rt
+    r3 = test_client.get('/at')
+    assert r3.status_code == 200,\
+        "Expected access token to succeed"
+    page_text = ''.join(codecs.iterdecode(r3.response, 'utf-8'))
+    assert page_text == 'mock_access_token',\
+        "Access token expected"
+    r4 = test_client.get('/rt')
+    assert r4.status_code == 200,\
+        "Expected refresh token to succeed"
+    page_text = ''.join(codecs.iterdecode(r4.response, 'utf-8'))
+    assert page_text == 'mock_refresh_token',\
+        "Refresh token expected"
+
 
 @patch('httplib2.Http', MockHttp)
 def test_refresh():

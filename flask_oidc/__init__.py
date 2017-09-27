@@ -252,6 +252,40 @@ class OpenIDConnect(object):
                     pass
         return info
 
+    def get_access_token(self):
+        """Method to return the current requests' access_token.
+
+        :returns: Access token or None
+        :rtype: str
+
+        .. versionadded:: 1.2
+        """
+        try:
+            credentials = OAuth2Credentials.from_json(
+                self.credentials_store[g.oidc_id_token['sub']])
+            return credentials.access_token
+        except KeyError:
+            logger.debug("Expired ID token, credentials missing",
+                         exc_info=True)
+            return None
+
+    def get_refresh_token(self):
+        """Method to return the current requests' refresh_token.
+
+        :returns: Access token or None
+        :rtype: str
+
+        .. versionadded:: 1.2
+        """
+        try:
+            credentials = OAuth2Credentials.from_json(
+                self.credentials_store[g.oidc_id_token['sub']])
+            return credentials.refresh_token
+        except KeyError:
+            logger.debug("Expired ID token, credentials missing",
+                         exc_info=True)
+            return None
+
     def _retrieve_userinfo(self, access_token=None):
         """
         Requests extra user information from the Provider's UserInfo and
