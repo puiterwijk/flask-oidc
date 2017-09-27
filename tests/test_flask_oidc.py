@@ -221,3 +221,14 @@ def test_api_token():
 @patch('httplib2.Http', MockHttp)
 def test_api_token_with_external_rendering():
     _check_api_token_handling('/external_api')
+
+def test_validate_token_return_false():
+    test_client = make_test_client()
+
+    from .app import oidc
+
+    no_token_err = oidc.validate_token(None)
+    assert bool(no_token_err) is False,\
+        "Expected no_token_err to eval to False"
+    assert no_token_err == 'Token required but invalid',\
+        "Expected correct no token error message"
