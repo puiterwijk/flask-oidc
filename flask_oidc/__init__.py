@@ -26,7 +26,7 @@
 from functools import wraps
 import os
 import json
-from base64 import b64encode
+from base64 import b64encode, urlsafe_b64encode, urlsafe_b64decode
 import time
 from copy import copy
 import logging
@@ -492,14 +492,14 @@ class OpenIDConnect(object):
         """
         destination = self.destination_serializer.dumps(destination).decode(
             'utf-8')
-        csrf_token = b64encode(os.urandom(24)).decode('utf-8')
+        csrf_token = urlsafe_b64encode(os.urandom(24)).decode('utf-8')
         session['oidc_csrf_token'] = csrf_token
         state = {
             'csrf_token': csrf_token,
             'destination': destination,
         }
         extra_params = {
-            'state': json.dumps(state),
+            'state': urlsafe_b64encode(json.dumps(state)),
         }
         if current_app.config['OIDC_GOOGLE_APPS_DOMAIN']:
             extra_params['hd'] = current_app.config['OIDC_GOOGLE_APPS_DOMAIN']
@@ -594,7 +594,7 @@ class OpenIDConnect(object):
         try:
             session_csrf_token = session.pop('oidc_csrf_token')
 
-            state = _json_loads(request.args['state'])
+            state = _json_loads(urlsafe_b64decode(request.args['state']))
             csrf_token = state['csrf_token']
             destination = state['destination']
 
