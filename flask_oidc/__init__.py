@@ -71,6 +71,30 @@ class DummySecretsCache(object):
         return self.client_secrets
 
 
+class ErrStr(str):
+    """
+    This is a class to work around the time I made a terrible API decision.
+
+    Basically, the validate_token() function returns a boolean True if all went
+    right, but a string with an error message if something went wrong.
+
+    The problem here is that this means that "if validate_token(...)" will
+    always be True, even with an invalid token, and users had to do
+    "if validate_token(...) is True:".
+
+    This is counter-intuitive, so let's "fix" this by returning instances of
+    this ErrStr class, which are basic strings except for their bool() results:
+    they return False.
+    """
+    def __nonzero__(self):
+        """The py2 method for bool()."""
+        return False
+
+    def __bool__(self):
+        """The py3 method for bool()."""
+        return False
+
+
 GOOGLE_ISSUERS = ['accounts.google.com', 'https://accounts.google.com']
 
 
@@ -647,11 +671,20 @@ class OpenIDConnect(object):
         :type scopes_required: list
 
         :returns: True if the token was valid and contained the required
-            scopes. A string if an error occured.
+            scopes. An ErrStr (subclass of string for which bool() is False) if
+            an error occured.
         :rtype: Boolean or String
 
         .. versionadded:: 1.1
         """
+        valid = self._validate_token(token, scopes_required)
+        if valid is True:
+            return True
+        else:
+            return ErrStr(valid)
+
+    def _validate_token(self, token, scopes_required=None):
+        """The actual implementation of validate_token."""
         if scopes_required is None:
             scopes_required = []
         scopes_required = set(scopes_required)
