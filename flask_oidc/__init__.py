@@ -594,7 +594,7 @@ class OpenIDConnect(object):
         try:
             session_csrf_token = session.pop('oidc_csrf_token')
 
-            state = _json_loads(urlsafe_b64decode(request.args['state']))
+            state = _json_loads(urlsafe_b64decode(request.args['state'].encode('utf-8')))
             csrf_token = state['csrf_token']
             destination = state['destination']
 
