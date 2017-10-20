@@ -155,6 +155,7 @@ class OpenIDConnect(object):
         # We use client_secret_post, because that's what the Google
         # oauth2client library defaults to
         app.config.setdefault('OIDC_INTROSPECTION_AUTH_METHOD', 'client_secret_post')
+        app.config.setdefault('OIDC_TOKEN_TYPE_HINT', 'Bearer')
 
         if not 'openid' in app.config['OIDC_SCOPES']:
             raise ValueError('The value "openid" must be in the OIDC_SCOPES')
@@ -832,9 +833,12 @@ class OpenIDConnect(object):
     def _get_token_info(self, token):
         # We hardcode to use client_secret_post, because that's what the Google
         # oauth2client library defaults to
-        request = {'token': token,
-                   'token_type_hint': 'access_token'}
+        request = {'token': token}
         headers = {'Content-type': 'application/x-www-form-urlencoded'}
+
+        hint = current_app.config['OIDC_TOKEN_TYPE_HINT']
+        if hint != 'none':
+            request['token_type_hint'] = hint
 
         auth_method = current_app.config['OIDC_INTROSPECTION_AUTH_METHOD'] 
         if (auth_method == 'client_secret_basic'):
