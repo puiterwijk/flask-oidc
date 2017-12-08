@@ -116,6 +116,9 @@ class OpenIDConnect(object):
             warn('urandom argument is deprecated and unused',
                  DeprecationWarning)
 
+        # By default, we do not have a custom callback
+        self._custom_callback = None
+
         # get stuff from the app's config, which may override stuff set above
         if app is not None:
             self.init_app(app)
@@ -174,7 +177,7 @@ class OpenIDConnect(object):
         assert isinstance(self.flow, OAuth2WebServerFlow)
 
         # create signers using the Flask secret key
-        self.destination_serializer = JSONWebSignatureSerializer(
+        self.extra_data_serializer = JSONWebSignatureSerializer(
             app.config['SECRET_KEY'])
         self.cookie_serializer = TimedJSONWebSignatureSerializer(
             app.config['SECRET_KEY'])
@@ -512,27 +515,36 @@ class OpenIDConnect(object):
             flow.redirect_uri = redirect_uri
         return flow
 
-    def redirect_to_auth_server(self, destination):
+    def redirect_to_auth_server(self, destination, customstate=None):
         """
         Set a CSRF token in the session, and redirect to the IdP.
 
         :param destination: The page that the user was going to,
             before we noticed they weren't logged in.
         :type destination: str
+        :param customstate: The custom data passed via the ODIC state.
+            Note that this only works with a custom_callback, and this will
+            ignore destination.
+        :type customstate: Anything that can be serialized
         :returns: A redirect response to start the login process.
-        :rtype: Redirect
+        :rtype: Flask Response
 
         .. deprecated:: 1.0
            Use :func:`require_login` instead.
         """
-        destination = self.destination_serializer.dumps(destination).decode(
-            'utf-8')
         csrf_token = urlsafe_b64encode(os.urandom(24)).decode('utf-8')
         session['oidc_csrf_token'] = csrf_token
         state = {
             'csrf_token': csrf_token,
-            'destination': destination,
         }
+        statefield = 'destination'
+        statevalue = destination
+        if customstate is not None:
+            statefield = 'custom'
+            statevalue = customstate
+        state[statefield] = self.extra_data_serializer.dumps(
+            statevalue).decode('utf-8')
+
         extra_params = {
             'state': urlsafe_b64encode(json.dumps(state).encode('utf-8')),
         }
@@ -620,7 +632,30 @@ class OpenIDConnect(object):
 
     WRONG_GOOGLE_APPS_DOMAIN = 'WRONG_GOOGLE_APPS_DOMAIN'
 
+    def custom_callback(self, view_func):
+        """
+        Wrapper function to use a custom callback.
+        The custom OIDC callback will get the custom state field passed in with
+        redirect_to_auth_server.
+        """
+        @wraps(view_func)
+        def decorated(*args, **kwargs):
+            plainreturn, data = self._process_callback('custom')
+            if plainreturn:
+                return data
+            else:
+                return view_func(data, *args, **kwargs)
+        self._custom_callback = decorated
+        return decorated
+
     def _oidc_callback(self):
+        plainreturn, data = self._process_callback('destination')
+        if plainreturn:
+            return data
+        else:
+            return redirect(data)
+
+    def _process_callback(self, statefield):
         """
         Exchange the auth code for actual credentials,
         then redirect to the originally requested page.
@@ -631,19 +666,18 @@ class OpenIDConnect(object):
 
             state = _json_loads(urlsafe_b64decode(request.args['state'].encode('utf-8')))
             csrf_token = state['csrf_token']
-            destination = state['destination']
 
             code = request.args['code']
         except (KeyError, ValueError):
             logger.debug("Can't retrieve CSRF token, state, or code",
                          exc_info=True)
-            return self._oidc_error()
+            return True, self._oidc_error()
 
         # check callback CSRF token passed to IdP
         # against session CSRF token held by user
         if csrf_token != session_csrf_token:
             logger.debug("CSRF token mismatch")
-            return self._oidc_error()
+            return True, self._oidc_error()
 
         # make a request to IdP to exchange the auth code for OAuth credentials
         flow = self._flow_for_request()
@@ -653,28 +687,27 @@ class OpenIDConnect(object):
             logger.debug("Invalid ID token")
             if id_token.get('hd') != current_app.config[
                     'OIDC_GOOGLE_APPS_DOMAIN']:
-                return self._oidc_error(
+                return True, self._oidc_error(
                     "You must log in with an account from the {0} domain."
                     .format(current_app.config['OIDC_GOOGLE_APPS_DOMAIN']),
                     self.WRONG_GOOGLE_APPS_DOMAIN)
-            return self._oidc_error()
+            return True, self._oidc_error()
 
         # store credentials by subject
         # when Google is the IdP, the subject is their G+ account number
         self.credentials_store[id_token['sub']] = credentials.to_json()
 
-        # Check whether somebody messed with the destination
-        destination = destination
+        # Retrieve the extra statefield data
         try:
-            response = redirect(self.destination_serializer.loads(destination))
+            response = self.extra_data_serializer.loads(state[statefield])
         except BadSignature:
-            logger.error('Destination signature did not match. Rogue IdP?')
-            response = redirect('/')
+            logger.error('State field was invalid')
+            return True, self._oidc_error()
 
         # set a persistent signed cookie containing the ID token
         # and redirect to the final destination
         self._set_cookie_id_token(id_token)
-        return response
+        return False, response
 
     def _oidc_error(self, message='Not Authorized', code=None):
         return (message, 401, {
