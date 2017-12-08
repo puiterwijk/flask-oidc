@@ -532,10 +532,11 @@ class OpenIDConnect(object):
         .. deprecated:: 1.0
            Use :func:`require_login` instead.
         """
-        csrf_token = urlsafe_b64encode(os.urandom(24)).decode('utf-8')
-        session['oidc_csrf_token'] = csrf_token
+        if 'oidc_csrf_token' not in session:
+            csrf_token = urlsafe_b64encode(os.urandom(24)).decode('utf-8')
+            session['oidc_csrf_token'] = csrf_token
         state = {
-            'csrf_token': csrf_token,
+            'csrf_token': session['oidc_csrf_token'],
         }
         statefield = 'destination'
         statevalue = destination
@@ -662,7 +663,7 @@ class OpenIDConnect(object):
         """
         # retrieve session and callback variables
         try:
-            session_csrf_token = session.pop('oidc_csrf_token')
+            session_csrf_token = session.get('oidc_csrf_token')
 
             state = _json_loads(urlsafe_b64decode(request.args['state'].encode('utf-8')))
             csrf_token = state['csrf_token']
