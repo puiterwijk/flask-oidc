@@ -26,7 +26,7 @@
 from functools import wraps
 import os
 import json
-from base64 import b64encode, urlsafe_b64encode, urlsafe_b64decode
+from base64 import b64encode, b64decode, urlsafe_b64encode, urlsafe_b64decode
 import time
 from copy import copy
 import logging
@@ -34,7 +34,7 @@ from warnings import warn
 import calendar
 
 from six.moves.urllib.parse import urlencode
-from flask import request, session, redirect, url_for, g, current_app
+from flask import request, session, redirect, abort, url_for, g, current_app
 from oauth2client.client import flow_from_clientsecrets, OAuth2WebServerFlow,\
     AccessTokenRefreshError, OAuth2Credentials
 import httplib2
@@ -493,6 +493,24 @@ class OpenIDConnect(object):
        Use :func:`require_login` instead.
     """
 
+    def require_role(self, client, role):
+        """
+        Function to check a client role in the access token
+
+        .. versionadded:: 1.3.0_predictx
+        """
+        def wrapper(view_func):
+            @wraps(view_func)
+            def decorated(*args, **kwargs):
+                pre, tkn, post = self.get_access_token().split('.')
+                access_token = json.loads(b64decode(tkn))
+                if role in access_token['resource_access'][client]['roles']:
+                    return view_func(*args, **kwargs)
+                else:
+                    return abort(403) 
+            return decorated
+        return wrapper
+        
     def flow_for_request(self):
         """
         .. deprecated:: 1.0
