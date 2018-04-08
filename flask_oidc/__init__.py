@@ -515,13 +515,14 @@ class OpenIDConnect(object):
             flow.redirect_uri = redirect_uri
         return flow
 
-    def redirect_to_auth_server(self, destination, customstate=None):
+    def redirect_to_auth_server(self, destination=None, customstate=None):
         """
         Set a CSRF token in the session, and redirect to the IdP.
 
         :param destination: The page that the user was going to,
             before we noticed they weren't logged in.
-        :type destination: str
+        :type destination: Url to return the client to if a custom handler is
+            not used. Not available with custom callback.
         :param customstate: The custom data passed via the ODIC state.
             Note that this only works with a custom_callback, and this will
             ignore destination.
@@ -532,6 +533,9 @@ class OpenIDConnect(object):
         .. deprecated:: 1.0
            Use :func:`require_login` instead.
         """
+        if not self._custom_callback and customstate:
+            raise ValueError('Custom State is only avilable with a custom '
+                             'handler')
         if 'oidc_csrf_token' not in session:
             csrf_token = urlsafe_b64encode(os.urandom(24)).decode('utf-8')
             session['oidc_csrf_token'] = csrf_token
