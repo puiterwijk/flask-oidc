@@ -151,6 +151,7 @@ class OpenIDConnect(object):
         app.config.setdefault('OIDC_USER_INFO_ENABLED', True)
         app.config.setdefault('OIDC_CALLBACK_ROUTE', '/oidc_callback')
         app.config.setdefault('OVERWRITE_REDIRECT_URI', False)
+        app.config.setdefault('OVERWRITE_REDIRECT_CODE', 302)
         # Configuration for resource servers
         app.config.setdefault('OIDC_RESOURCE_SERVER_ONLY', False)
         app.config.setdefault('OIDC_RESOURCE_CHECK_AUD', False)
@@ -565,7 +566,8 @@ class OpenIDConnect(object):
             extra_params=urlencode(extra_params))
         # if the user has an ID token, it's invalid, or we wouldn't be here
         self._set_cookie_id_token(None)
-        return redirect(auth_url)
+        status_code = current_app.config['OVERWRITE_REDIRECT_CODE']
+        return redirect(auth_url, code=status_code)
 
     def _is_id_token_valid(self, id_token):
         """
