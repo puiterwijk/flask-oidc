@@ -26,7 +26,7 @@ import json
 import logging
 
 from flask import Flask, g
-from flask.ext.oidc import OpenIDConnect
+from flask_oidc import OpenIDConnect
 
 logging.basicConfig(level=logging.DEBUG)
 

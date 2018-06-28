@@ -5,8 +5,7 @@ Flask app for testing the OpenID Connect extension.
 import json
 
 from flask import Flask, g
-from flask.ext.oidc import OpenIDConnect
-
+from flask_oidc import OpenIDConnect
 
 oidc = None
 
