@@ -882,7 +882,7 @@ class OpenIDConnect(object):
         if (auth_method == 'client_secret_basic'):
             basic_auth_string = '%s:%s' % (self.client_secrets['client_id'], self.client_secrets['client_secret'])
             basic_auth_bytes = bytearray(basic_auth_string, 'utf-8')
-            headers['Authorization'] = 'Basic %s' % b64encode(basic_auth_bytes)
+            headers['Authorization'] = 'Basic %s' % b64encode(basic_auth_bytes).decode('utf-8')
         elif (auth_method == 'bearer'):
             headers['Authorization'] = 'Bearer %s' % token
         elif (auth_method == 'client_secret_post'):
