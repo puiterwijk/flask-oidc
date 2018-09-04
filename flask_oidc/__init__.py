@@ -890,7 +890,8 @@ class OpenIDConnect(object):
             headers['Authorization'] = 'Bearer %s' % token
         elif (auth_method == 'client_secret_post'):
             request['client_id'] = self.client_secrets['client_id']
-            request['client_secret'] = self.client_secrets['client_secret']
+            if self.client_secrets['client_secret'] is not None:
+                request['client_secret'] = self.client_secrets['client_secret']
 
         resp, content = httplib2.Http().request(
             self.client_secrets['token_introspection_uri'], 'POST',
