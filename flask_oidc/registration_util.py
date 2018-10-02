@@ -46,6 +46,8 @@ def _parse_args():
                         help='Token introspection URI')
     parser.add_argument('--output-file', default='client_secrets.json',
                         help='File to write client info to')
+    parser.add_argument('--redirect_url',
+                        help='URL used as OIDC callback')
     parser.add_argument('--debug', action='store_true')
     return parser.parse_args()
 
@@ -59,8 +61,12 @@ def main():
     if args.debug:
         LOG.setLevel(logging.DEBUG)
 
-    redirect_uris = ['%s/oidc_callback' % args.application_url]
+    if args.redirect_url:
+        redirect_uris = [args.redirect_url]
+    else:
+        redirect_uris = ['%s/oidc_callback' % args.application_url]
     registration.check_redirect_uris(redirect_uris)
+
     try:
         OP = discovery.discover_OP_information(args.provider_url)
     except Exception as ex:
