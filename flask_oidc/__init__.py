@@ -189,9 +189,12 @@ class OpenIDConnect(object):
 
     def load_secrets(self, app):
         # Load client_secrets.json to pre-initialize some configuration
-        return _json_loads(open(app.config['OIDC_CLIENT_SECRETS'],
-                                   'r').read())
-        
+        content = app.config['OIDC_CLIENT_SECRETS']
+        if isinstance(content, dict):
+            return content
+        else:
+            return _json_loads(open(content, 'r').read())
+
     @property
     def user_loggedin(self):
         """
