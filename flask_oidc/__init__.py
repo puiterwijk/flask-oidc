@@ -584,6 +584,9 @@ class OpenIDConnect(object):
                          % id_token['iss'])
             return False
 
+         if 'aud' in id_token and isinstance(id_token['aud'], list) and len(id_token['aud']) == 1:
+            id_token['aud'] = id_token['aud'][0]
+            
         if isinstance(id_token['aud'], list):
             # step 3 for audience list
             if self.flow.client_id not in id_token['aud']:
