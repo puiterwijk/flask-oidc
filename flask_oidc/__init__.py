@@ -354,6 +354,9 @@ class OpenIDConnect(object):
         except SignatureExpired:
             logger.debug("Invalid ID token cookie", exc_info=True)
             return None
+        except BadSignature:
+            logger.info("Signature invalid for ID token cookie", exc_info=True)
+            return None
 
     def set_cookie_id_token(self, id_token):
         """
