@@ -178,9 +178,9 @@ class OpenIDConnect(object):
 
         # create signers using the Flask secret key
         self.extra_data_serializer = JSONWebSignatureSerializer(
-            app.config['SECRET_KEY'])
+            app.config['SECRET_KEY'], salt='flask-oidc-extra-data')
         self.cookie_serializer = TimedJSONWebSignatureSerializer(
-            app.config['SECRET_KEY'])
+            app.config['SECRET_KEY'], salt='flask-oidc-cookie')
 
         try:
             self.credentials_store = app.config['OIDC_CREDENTIALS_STORE']
