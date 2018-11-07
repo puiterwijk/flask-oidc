@@ -34,6 +34,8 @@ from warnings import warn
 import calendar
 
 from six.moves.urllib.parse import urlencode
+from six.moves.urllib.request import urlopen
+
 from flask import request, session, redirect, url_for, g, current_app
 from oauth2client.client import flow_from_clientsecrets, OAuth2WebServerFlow,\
     AccessTokenRefreshError, OAuth2Credentials
@@ -155,9 +157,7 @@ class OpenIDConnect(object):
         app.config.setdefault('OIDC_ID_TOKEN_COOKIE_TTL', 7 * 86400)  # 7 days
         # should ONLY be turned off for local debugging
         app.config.setdefault('OIDC_COOKIE_SECURE', True)
-        app.config.setdefault('OIDC_VALID_ISSUERS',
-                              (self.client_secrets.get('issuer') or
-                               GOOGLE_ISSUERS))
+        app.config.setdefault('OIDC_VALID_ISSUERS', GOOGLE_ISSUERS)
         app.config.setdefault('OIDC_CLOCK_SKEW', 60)  # 1 minute
         app.config.setdefault('OIDC_REQUIRE_VERIFIED_EMAIL', False)
         app.config.setdefault('OIDC_OPENID_REALM', None)
@@ -240,7 +240,7 @@ class OpenIDConnect(object):
             logger.debug("Loading: {}".format(url))
 
             provider_info = json.load(
-                urllib.request.urlopen(url)
+                urlopen(url)
             )
 
         except Exception as e:
@@ -259,7 +259,7 @@ class OpenIDConnect(object):
                 registration = requests.post(
                     provider_info['registration_endpoint'],
                     data = json.dumps({
-                        "redirect_uris": REDIRECT_URL,
+                        "redirect_uris": self._oidc_callback,
                         "grant_types": "authorization_code",
                         "client_name": provider.get('client_name', "Dynamic Registration"),
                         "response_types": "code",
@@ -280,7 +280,7 @@ class OpenIDConnect(object):
         try:
             try:
                jwks_keys = json.load(
-                 urllib.request.urlopen(provider_info['jwks_uri'])
+                 urlopen(provider_info['jwks_uri'])
                )
             except:
                jwks_keys = None
@@ -293,7 +293,7 @@ class OpenIDConnect(object):
                     'token_uri': provider_info['token_endpoint'],
                     'userinfo_uri': provider_info['userinfo_endpoint'],
                     'jwks_keys': jwks_keys,
-                    'redirect_uris': REDIRECT_URL,
+                    'redirect_uris': self._oidc_callback,
                     'issuer': provider_info['issuer'],
                 }
             }
