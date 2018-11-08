@@ -133,7 +133,7 @@ class OpenIDConnect(object):
         # Backwards compatible: When provider argument is ommitted,
         # the value would be None, then in method load_secrets, the
         # client_secrets will be tried to load...
-        self.init_provider(app, provider)
+        self.init_provider(provider)
 
     def __exit__(self, exception_type, exception_value, traceback):
         self.logout()
