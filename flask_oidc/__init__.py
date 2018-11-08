@@ -141,7 +141,7 @@ class OpenIDConnect(object):
 
         self.client_secrets = None
 
-        current_app.config['OIDC_VALID_ISSUERS'] = []
+        current_app.config['OIDC_VALID_ISSUERS'] = GOOGLE_ISSUERS
 
     def init_app(self, app):
         """
@@ -218,7 +218,7 @@ class OpenIDConnect(object):
 
         assert isinstance(self.flow, OAuth2WebServerFlow)
 
-        current_app.config['OIDC_VALID_ISSUERS'] = (self.client_secrets.get('issuer') or [])
+        current_app.config['OIDC_VALID_ISSUERS'] = (self.client_secrets.get('issuer') or GOOGLE_ISSUERS)
 
     def load_secrets(self, provider):
 
