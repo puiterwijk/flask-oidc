@@ -133,7 +133,8 @@ class OpenIDConnect(object):
         # Backwards compatible: When provider argument is ommitted,
         # the value would be None, then in method load_secrets, the
         # client_secrets will be tried to load...
-        self.init_provider(provider)
+        with app.app_context():
+            self.init_provider(provider)
 
     def __exit__(self, exception_type, exception_value, traceback):
         self.logout()
@@ -226,7 +227,7 @@ class OpenIDConnect(object):
             if static_secrets:
                 return _json_loads(open(static_secrets,'r').read())
         except Exception as e:
-            raise Exception("Error reading secrets: {}, error: {}".format(static_secrets, str(e)))
+            raise Exception("Error reading secrets: {}".format(str(e)))
 
         if not provider:
             raise Exception("No Provider specified")
