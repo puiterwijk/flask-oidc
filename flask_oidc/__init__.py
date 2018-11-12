@@ -38,8 +38,7 @@ from flask import request, session, redirect, url_for, g, current_app, abort
 from oauth2client.client import flow_from_clientsecrets, OAuth2WebServerFlow,\
     AccessTokenRefreshError, OAuth2Credentials
 import httplib2
-from itsdangerous import JSONWebSignatureSerializer, BadSignature, \
-    TimedJSONWebSignatureSerializer, SignatureExpired
+from itsdangerous import JSONWebSignatureSerializer, BadSignature
 
 __all__ = ['OpenIDConnect', 'MemoryCredentials']
 
@@ -180,7 +179,7 @@ class OpenIDConnect(object):
         # create signers using the Flask secret key
         self.extra_data_serializer = JSONWebSignatureSerializer(
             app.config['SECRET_KEY'], salt='flask-oidc-extra-data')
-        self.cookie_serializer = TimedJSONWebSignatureSerializer(
+        self.cookie_serializer = JSONWebSignatureSerializer(
             app.config['SECRET_KEY'], salt='flask-oidc-cookie')
 
         try:
