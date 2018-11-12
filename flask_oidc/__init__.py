@@ -593,7 +593,7 @@ class OpenIDConnect(object):
                 logger.error('We are not a valid audience')
                 return False
             # step 4
-            if 'azp' not in id_token:
+            if 'azp' not in id_token and len(id_token['aud']) > 1:
                 logger.error('Multiple audiences and not authorized party')
                 return False
         else:
