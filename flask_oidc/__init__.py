@@ -151,6 +151,7 @@ class OpenIDConnect(object):
         app.config.setdefault('OIDC_USER_INFO_ENABLED', True)
         app.config.setdefault('OIDC_CALLBACK_ROUTE', '/oidc_callback')
         app.config.setdefault('OVERWRITE_REDIRECT_URI', False)
+        app.config.setdefault("OIDC_EXTRA_REQUEST_AUTH_PARAMS", {})
         # Configuration for resource servers
         app.config.setdefault('OIDC_RESOURCE_SERVER_ONLY', False)
         app.config.setdefault('OIDC_RESOURCE_CHECK_AUD', False)
@@ -581,6 +582,7 @@ class OpenIDConnect(object):
         extra_params = {
             'state': urlsafe_b64encode(json.dumps(state).encode('utf-8')),
         }
+        extra_params.update(current_app.config['OIDC_EXTRA_REQUEST_AUTH_PARAMS'])
         if current_app.config['OIDC_GOOGLE_APPS_DOMAIN']:
             extra_params['hd'] = current_app.config['OIDC_GOOGLE_APPS_DOMAIN']
         if current_app.config['OIDC_OPENID_REALM']:
