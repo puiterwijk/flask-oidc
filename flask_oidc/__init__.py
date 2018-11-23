@@ -38,7 +38,8 @@ from flask import request, session, redirect, url_for, g, current_app, abort
 from oauth2client.client import flow_from_clientsecrets, OAuth2WebServerFlow,\
     AccessTokenRefreshError, OAuth2Credentials
 import httplib2
-from itsdangerous import JSONWebSignatureSerializer, BadSignature
+from itsdangerous import JSONWebSignatureSerializer, BadSignature, \
+    SignatureExpired
 
 __all__ = ['OpenIDConnect', 'MemoryCredentials']
 
