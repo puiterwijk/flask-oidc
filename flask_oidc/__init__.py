@@ -1,4 +1,4 @@
-# Copyright (c) 2014-2015, Jeremy Ehrhardt <jeremy@bat-country.us>
+# Copyright (c) 2014-2015, Erica Ehrhardt
 # Copyright (c) 2016, Patrick Uiterwijk <patrick@puiterwijk.org>
 # All rights reserved.
 #
