@@ -32,6 +32,7 @@ from copy import copy
 import logging
 from warnings import warn
 import calendar
+import re
 
 from six.moves.urllib.parse import urlencode
 from flask import request, session, redirect, url_for, g, current_app, abort
@@ -39,6 +40,8 @@ from oauth2client.client import flow_from_clientsecrets, OAuth2WebServerFlow,\
     AccessTokenRefreshError, OAuth2Credentials
 import httplib2
 from itsdangerous import JSONWebSignatureSerializer, BadSignature
+
+from flask_oidc.keycloak_api import KeycloakAPI
 
 __all__ = ['OpenIDConnect', 'MemoryCredentials']
 
@@ -130,6 +133,12 @@ class OpenIDConnect(object):
         :type app: Flask
         """
         secrets = self.load_secrets(app)
+        self.keycloak_enabled = False
+        if app.config["KEYCLOAK_ENABLED"]:
+            keycloak_secrets = self.load_keycloak_secrets(app)
+            self.keycloakApi = KeycloakAPI()
+            self.keycloakApi.init_app(keycloak_secrets)
+            self.keycloak_enabled = True
         self.client_secrets = list(secrets.values())[0]
         secrets_cache = DummySecretsCache(secrets)
 
@@ -190,6 +199,14 @@ class OpenIDConnect(object):
     def load_secrets(self, app):
         # Load client_secrets.json to pre-initialize some configuration
         content = app.config['OIDC_CLIENT_SECRETS']
+        if isinstance(content, dict):
+            return content
+        else:
+            return _json_loads(open(content, 'r').read())
+
+    def load_keycloak_secrets(self, app):
+        # Load client_secrets.json to pre-initialize some configuration
+        content = app.config['OIDC_KEYCLOAK_CLIENT_SECRETS']
         if isinstance(content, dict):
             return content
         else:
@@ -876,26 +893,173 @@ class OpenIDConnect(object):
         def wrapper(view_func):
             @wraps(view_func)
             def decorated(*args, **kwargs):
-                token = None
-                if 'Authorization' in request.headers and request.headers['Authorization'].startswith('Bearer '):
-                    token = request.headers['Authorization'].split(None,1)[1].strip()
-                if 'access_token' in request.form:
-                    token = request.form['access_token']
-                elif 'access_token' in request.args:
-                    token = request.args['access_token']
+                token = self._extract_access_token(request)
 
                 validity = self.validate_token(token, scopes_required)
                 if (validity is True) or (not require_token):
                     return view_func(*args, **kwargs)
                 else:
-                    response_body = {'error': 'invalid_token',
-                                     'error_description': validity}
-                    if render_errors:
-                        response_body = json.dumps(response_body)
-                    return response_body, 401, {'WWW-Authenticate': 'Bearer'}
+                    return self._deny_access(validity, render_errors, 401)
 
             return decorated
         return wrapper
+
+    def _extract_access_token(self, request):
+        self.currentUri = request.script_root + request.path
+        if 'Authorization' in request.headers and request.headers['Authorization'].startswith('Bearer '):
+            return request.headers['Authorization'].split(None, 1)[1].strip()
+        if 'access_token' in request.form:
+            return request.form['access_token']
+        elif 'access_token' in request.args:
+            return request.args['access_token']
+
+    def check_authorization(self, require_token=False, scopes_required=None,
+                           render_errors=True):
+        """
+        Use this to decorate view functions that should accept OAuth2 tokens,
+        this will most likely apply to API functions.
+
+        Tokens are accepted as part of the query URL (access_token value) or
+        a POST form value (access_token).
+
+        This endpoint will also check if the current request has the permission
+        to be executed. If the caller has no authorization it returns a 403.
+
+        Note that this only works if a token introspection url is configured,
+        as that URL will be queried for the validity and scopes of a token.
+        It is tested with keycloak, not with other IdP's!
+
+        :param require_token: Whether a token is required for the current
+            function. If this is True, we will abort the request if there
+            was no token provided.
+        :type require_token: bool
+        :param scopes_required: List of scopes that are required to be
+            granted by the token before being allowed to call the protected
+            function.
+        :type scopes_required: list
+        :param render_errors: Whether or not to eagerly render error objects
+            as JSON API responses. Set to False to pass the error object back
+            unmodified for later rendering.
+        :type render_errors: callback(obj) or None
+
+        """
+
+        def wrapper(view_func):
+            @wraps(view_func)
+            def decorated(*args, **kwargs):
+                if self.keycloak_enabled is False:
+                    return True
+                token = self._extract_access_token(request)
+
+                validity = self.validate_token(token, scopes_required)
+                authorized = False
+                if validity is True:
+                    authorized = self._is_authorized(token)
+
+                if (authorized is True) or (not require_token):
+                    return view_func(*args, **kwargs)
+                else:
+                    return self._deny_access(validity, render_errors, 403)
+
+            return decorated
+        return wrapper
+
+    def _deny_access(self, error_description, render_errors, error_code):
+        response_body = {'error': 'invalid_token',
+                         'error_description': error_description}
+        if render_errors:
+            response_body = json.dumps(response_body)
+        return response_body, error_code, {'WWW-Authenticate': 'Bearer'}
+
+    def _is_authorized(self, token):
+        """
+        Proves if the call to the endpoint is authorized
+        :return: true if the user is authorized, otherwise false
+        """
+        if self.keycloak_enabled is False:
+            return True
+        if token is None:
+            logger.debug("The access token is not available.")
+            return False
+        try:
+            json_content_rpt = self.keycloakApi.authorize(token)
+            if json_content_rpt is None:
+                raise Exception("Not authorized!")
+            resources = self._get_permissions_from_token(json_content_rpt["access_token"])
+            if resources is None:
+                raise Exception("Empty resources set.")
+            for resource_id in resources:
+                resource = self.keycloakApi.get_resource_info(token, resource_id["rsid"])
+                if resource is not None and "uris" in resource and \
+                        self._is_uri_allowed(json_content_rpt["access_token"], resource):
+                    return True
+        except Exception as e:
+            logger.debug(str(e))
+        logger.debug("Not authorized!")
+        return False
+
+    def _get_permissions_from_token(self, rpt_token):
+        if self.keycloak_enabled is False:
+            return None
+        rpt = self.keycloakApi.jwt_decode(rpt_token)
+        if (rpt is None) or ('authorization' not in rpt) or ('permissions' not in rpt["authorization"]):
+            return None
+        return rpt["authorization"]["permissions"]
+
+    def _is_uri_allowed(self, rpt_token, resource):
+        """
+        Verifies that the access to a resource at a specific endpoint is granted or not
+        :param rpt_token: requesting party token
+        :type rpt_token: str
+        :param resource: the resource at a specific endpoint
+        :type resource: dict
+        :return: true if it is an allowed URI, otherwise false
+        """
+        if self.keycloak_enabled is False:
+            return True
+        logger.debug("Check URIs against the RPT token.")
+        has_permission = False
+        is_allowed_uri = False
+
+        permissions = self._get_permissions_from_token(rpt_token)
+        if permissions is None:
+            logger.error("The minimum for the RPT is not satisfied.")
+            return False
+
+        for permission in permissions:
+            if permission["rsid"] == resource["_id"]:
+                has_permission = True
+        if has_permission is False:
+            logger.error("Permission was not found in the RPT token.")
+            return False
+
+        return self._is_access_granted(is_allowed_uri, resource)
+
+    def _is_access_granted(self, is_allowed_uri, resource):
+        if self.keycloak_enabled is False:
+            return True
+        for uri in resource["uris"]:
+            if is_allowed_uri is False:
+                is_allowed_uri = self._verify_uri(uri)
+        return is_allowed_uri
+
+    def _verify_uri(self, uri):
+        """
+        Verify if the request URI follows the uri pattern
+        :param uri: the URI pattern
+        :return: true if the request path is conform pattern
+        """
+        if self.keycloak_enabled is False:
+            return True
+        logger.debug("Verify if the request URI follows the uri pattern")
+        if "." in uri:
+            uri = uri.replace(".", "\\.")
+        if "*" in uri:
+            uri = uri.replace("*", ".*")
+        found = re.search("^" + uri + "(/)?$", self.currentUri)
+        if found is not None:
+            return True
+        return False
 
     def _get_token_info(self, token):
         # We hardcode to use client_secret_post, because that's what the Google
