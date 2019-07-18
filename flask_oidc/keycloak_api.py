@@ -4,7 +4,19 @@ import httplib2
 
 from jose import jwt
 from six.moves.urllib.parse import urlencode
-from PlanOne.keycloak_oidc.urls_patterns import URL_TOKEN, URL_PROTECTION
+
+# KEYCLOAK URLS
+URL_ISSUER = "{base_url}/realms/{realm-name}"
+URL_WELL_KNOWN = "{base_url}/realms/{realm-name}/.well-known/openid-configuration"
+URL_TOKEN = "{base_url}/realms/{realm-name}/protocol/openid-connect/token"
+URL_USERINFO = "{base_url}/realms/{realm-name}/protocol/openid-connect/userinfo"
+URL_LOGOUT = "{base_url}/realms/{realm-name}/protocol/openid-connect/logout"
+URL_CERTS = "{base_url}/realms/{realm-name}/protocol/openid-connect/certs"
+URL_INTROSPECT = "{base_url}/realms/{realm-name}/protocol/openid-connect/token/introspect"
+URL_ENTITLEMENT = "{base_url}/realms/{realm-name}/authz/entitlement/{entitlement-endpoint}"
+URL_PROTECTION = "{base_url}/realms/{realm-name}/authz/protection/{protection-endpoint}"
+URL_AUTH = "{base_url}/realms/planone/protocol/openid-connect/auth"
+URL_INTROSPECT = "{base_url}/realms/planone/protocol/openid-connect/token/introspect"
 
 logger = logging.getLogger(__name__)
 
