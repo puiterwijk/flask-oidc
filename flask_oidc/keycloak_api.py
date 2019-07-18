@@ -31,6 +31,12 @@ class KeycloakAPI(object):
         self.client_secrets = client_secrets
 
     def impersonate(self, token, subject, target_client):
+        """
+        :param token: Access token from the impersonator
+        :param subject: the name of the target account
+        :param target_client: the id of the target client
+        :return: The access and refresh token for subject
+        """
         if token is None:
             logger.error("The access token is not available.")
             return False
@@ -58,6 +64,11 @@ class KeycloakAPI(object):
         return content, resp
 
     def authorize(self, token):
+        """
+
+        :param token: Access token
+        :return: True if the user is authorized otherwise false
+        """
         if token is None:
             logger.error("The access token is not available.")
             return False

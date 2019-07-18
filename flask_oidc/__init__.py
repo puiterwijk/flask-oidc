@@ -1007,6 +1007,11 @@ class OpenIDConnect(object):
         return False
 
     def _get_permissions_from_token(self, rpt_token):
+        """
+
+        :param rpt_token: requesting party token that contains the permissions
+        :return: Returns a dict with all permissions from the token
+        """
         if self.keycloak_enabled is False:
             return None
         rpt = self.keycloakApi.jwt_decode(rpt_token)
