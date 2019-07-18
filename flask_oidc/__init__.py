@@ -69,7 +69,7 @@ class DummySecretsCache(object):
     def __init__(self, client_secrets):
         self.client_secrets = client_secrets
 
-    def get(self, filename, namespace):
+    def get(self):
         return self.client_secrets
 
 
@@ -760,8 +760,8 @@ class OpenIDConnect(object):
         self._set_cookie_id_token(id_token)
         return False, response
 
-    def _oidc_error(self, message='Not Authorized', code=None):
-        return (message, 401, {
+    def _oidc_error(self, message='Not Authorized', code=401):
+        return (message, code, {
             'Content-Type': 'text/plain',
         })
 
@@ -952,7 +952,7 @@ class OpenIDConnect(object):
 
                 validity = self.validate_token(token, scopes_required)
                 authorized = False
-                if validity is True:
+                if validity is True and require_token is True:
                     authorized = self._is_authorized(token)
 
                 if (authorized is True) or (not require_token):
