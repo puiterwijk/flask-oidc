@@ -895,6 +895,7 @@ class OpenIDConnect(object):
         def wrapper(view_func):
             @wraps(view_func)
             def decorated(*args, **kwargs):
+                self.currentUri = request.script_root + request.path
                 token = self._extract_access_token(request)
 
                 validity = self.validate_token(token, scopes_required)
@@ -907,7 +908,6 @@ class OpenIDConnect(object):
         return wrapper
 
     def _extract_access_token(self, request):
-        self.currentUri = request.script_root + request.path
         if 'Authorization' in request.headers and request.headers['Authorization'].startswith('Bearer '):
             return request.headers['Authorization'].split(None, 1)[1].strip()
         if 'access_token' in request.form:
@@ -950,6 +950,7 @@ class OpenIDConnect(object):
             def decorated(*args, **kwargs):
                 if self.keycloak_enabled is False:
                     return True
+                self.currentUri = request.script_root + request.path
                 token = self._extract_access_token(request)
 
                 validity = self.validate_token(token, scopes_required)
