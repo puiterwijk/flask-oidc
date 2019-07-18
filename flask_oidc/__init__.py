@@ -913,8 +913,7 @@ class OpenIDConnect(object):
         elif 'access_token' in request.args:
             return request.args['access_token']
 
-    def check_authorization(self, require_token=False, scopes_required=None,
-                           render_errors=True):
+    def check_authorization(self, require_token=False, scopes_required=None, render_errors=True):
         """
         Use this to decorate view functions that should accept OAuth2 tokens,
         this will most likely apply to API functions.

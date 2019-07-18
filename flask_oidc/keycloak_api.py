@@ -40,7 +40,7 @@ class KeycloakAPI(object):
                 'subject_token': token}
 
     def _execute_impersonation_call(self, headers, payload):
-        params_path = {"base_url": self.client_secrets["base_url"], "realm-name": self.client_secrets["realm"]}
+        params_path = {"base_url": self.client_secrets["auth-server-url"], "realm-name": self.client_secrets["realm"]}
         resp, content = httplib2.Http().request(URL_TOKEN.format(**params_path), 'POST', headers=headers,
                                                 body=urlencode(payload))
         return content, resp
@@ -70,7 +70,7 @@ class KeycloakAPI(object):
                 'audience': self.client_secrets['client_id']}
 
     def _execute_authorization_call(self, headers, payload):
-        params_path = {"auth-server-url": self.client_secrets["auth-server-url"], "realm": self.client_secrets["realm"]}
+        params_path = {"base_url": self.client_secrets["auth-server-url"], "realm-name": self.client_secrets["realm"]}
         resp, content = httplib2.Http().request(URL_TOKEN.format(**params_path), 'POST', headers=headers,
                                                 body=urlencode(payload))
         return content, resp
@@ -113,7 +113,7 @@ class KeycloakAPI(object):
         return {'Authorization': 'Bearer ' + str(token)}
 
     def _execute_get_resource_info_call(self, headers, payload, resource_id):
-        params_path = {"auth-server-url": self.client_secrets["auth-server-url"], "realm": self.client_secrets["realm"],
+        params_path = {"base_url": self.client_secrets["auth-server-url"], "realm-name": self.client_secrets["realm"],
                        "protection-endpoint": "resource_set/" + resource_id}
         resp, content = httplib2.Http().request(URL_PROTECTION.format(**params_path), 'GET', headers=headers,
                                                 body=json.dumps(payload))
