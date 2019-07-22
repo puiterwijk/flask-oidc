@@ -141,6 +141,7 @@ class OpenIDConnect(object):
             self.keycloak_enabled = True
             self.keycloak_realm_roles = None
             self.keycloak_client_roles = None
+            self.rpt_token = None
         self.client_secrets = list(secrets.values())[0]
         secrets_cache = DummySecretsCache(secrets)
 
@@ -996,23 +997,26 @@ class OpenIDConnect(object):
             logger.debug("The access token is not available.")
             return False
         try:
-            json_content_rpt = self.keycloakApi.authorize(token)
-            if json_content_rpt is None:
+            self.rpt_token = self.keycloakApi.authorize(token)
+            if self.rpt_token is None:
                 raise Exception("Not authorized!")
-            resources = self._get_permissions_from_token(json_content_rpt["access_token"])
-            self.keycloak_realm_roles = self._get_realm_roles_from_token(json_content_rpt["access_token"])
-            self.keycloak_client_roles = self._get_client_roles_from_token(json_content_rpt["access_token"])
+            resources = self._get_permissions_from_token(self.rpt_token["access_token"])
+            self.keycloak_realm_roles = self._get_realm_roles_from_token(self.rpt_token["access_token"])
+            self.keycloak_client_roles = self._get_client_roles_from_token(self.rpt_token["access_token"])
             if resources is None:
                 raise Exception("Empty resources set.")
             for resource_id in resources:
                 resource = self.keycloakApi.get_resource_info(token, resource_id["rsid"])
                 if resource is not None and "uris" in resource and \
-                        self._is_uri_allowed(json_content_rpt["access_token"], resource):
+                        self._is_uri_allowed(self.rpt_token["access_token"], resource):
                     return True
         except Exception as e:
             logger.debug(str(e))
         logger.debug("Not authorized!")
         return False
+
+    def get_rpt_token(self):
+        return self.rpt_token
 
     def get_keycloak_realm_roles(self):
         return self.keycloak_realm_roles
