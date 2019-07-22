@@ -287,6 +287,9 @@ class OpenIDConnect(object):
         .. versionadded:: 1.2
         """
         try:
+            # user is not logged in
+            if self.user_loggedin is not True:
+                return None
             credentials = OAuth2Credentials.from_json(
                 self.credentials_store[g.oidc_id_token['sub']])
             return credentials.access_token
@@ -1022,7 +1025,6 @@ class OpenIDConnect(object):
         if (token is None) or ('realm_access' not in token) or ('roles' not in token["realm_access"]):
             return None
         return token["realm_access"]["roles"]
-
 
     def _get_client_roles_from_token(self, token):
         token = self.keycloakApi.jwt_decode(token)
