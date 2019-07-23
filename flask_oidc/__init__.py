@@ -125,6 +125,14 @@ class OpenIDConnect(object):
         if app is not None:
             self.init_app(app)
 
+        # keycloak default init
+        self.keycloakApi = None
+        self.keycloak_enabled = False
+        self.keycloak_realm_roles = None
+        self.keycloak_client_roles = None
+        self.rpt_token = None
+        self.currentUri = None
+
     def init_app(self, app):
         """
         Do setup that requires a Flask app.
