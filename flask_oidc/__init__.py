@@ -213,7 +213,8 @@ class OpenIDConnect(object):
         if isinstance(content, dict):
             return content
         else:
-            return _json_loads(open(content, 'r').read())
+            with open(content, 'r') as c:
+                return _json_loads(c.read())
 
     def load_keycloak_secrets(self, app):
         # Load client_secrets.json to pre-initialize some configuration
@@ -221,7 +222,8 @@ class OpenIDConnect(object):
         if isinstance(content, dict):
             return content
         else:
-            return _json_loads(open(content, 'r').read())
+            with open(content, 'r') as c:
+                return _json_loads(c.read())
 
     @property
     def user_loggedin(self):
@@ -994,7 +996,7 @@ class OpenIDConnect(object):
             response_body = json.dumps(response_body)
         return response_body, error_code, {'WWW-Authenticate': 'Bearer'}
 
-    def _is_authorized(self, token):
+    def _is_authorized(self, token, validation_func=None):
         """
         Proves if the call to the endpoint is authorized
         :return: true if the user is authorized, otherwise false
@@ -1004,6 +1006,8 @@ class OpenIDConnect(object):
         if token is None:
             logger.debug("The access token is not available.")
             return False
+        if validation_func is None:
+            validation_func = self._is_uri_allowed
         try:
             self.rpt_token = self.keycloakApi.authorize(token)
             if self.rpt_token is None:
@@ -1016,7 +1020,7 @@ class OpenIDConnect(object):
             for resource_id in resources:
                 resource = self.keycloakApi.get_resource_info(token, resource_id["rsid"])
                 if resource is not None and "uris" in resource and \
-                        self._is_uri_allowed(self.rpt_token["access_token"], resource):
+                        validation_func(self.rpt_token["access_token"], resource):
                     return True
         except Exception as e:
             logger.debug(str(e))
