@@ -867,7 +867,7 @@ class OpenIDConnect(object):
             if not has_required_scopes:
                 logger.debug('Token missed required scopes')
 
-        if (valid_token and has_required_scopes):
+        if valid_token and has_required_scopes:
             g.oidc_token_info = token_info
             return True
 
@@ -878,8 +878,7 @@ class OpenIDConnect(object):
         else:
             return 'Something went wrong checking your token'
 
-    def accept_token(self, require_token=False, scopes_required=None,
-                           render_errors=True):
+    def accept_token(self, require_token=False, scopes_required=None, render_errors=True):
         """
         Use this to decorate view functions that should accept OAuth2 tokens,
         this will most likely apply to API functions.
@@ -957,8 +956,8 @@ class OpenIDConnect(object):
             unmodified for later rendering.
         :type render_errors: callback(obj) or None
 
+        .. versionadded:: 1.4
         """
-
         def wrapper(view_func):
             @wraps(view_func)
             def decorated(*args, **kwargs):
@@ -982,13 +981,14 @@ class OpenIDConnect(object):
 
     def _deny_access(self, error_description, render_errors, error_code):
         """
-
         :param error_description: Error message to print
         :param render_errors: Whether or not to eagerly render error objects
             as JSON API responses. Set to False to pass the error object back
             unmodified for later rendering.
         :param error_code: HTTP-Code that is returned
         :return: Json-Object with error message and error code
+
+        .. versionadded:: 1.4
         """
         response_body = {'error': 'invalid_token',
                          'error_description': error_description}
@@ -999,7 +999,14 @@ class OpenIDConnect(object):
     def _is_authorized(self, token, validation_func=None):
         """
         Proves if the call to the endpoint is authorized
+        :param token: access token
+        :type token: str
+        :param: validation_func: function that implements the verification if the request is authorized
+            If parameter is None, the default behaviour is used
+        :type: validation_func: function
         :return: true if the user is authorized, otherwise false
+
+        .. versionadded:: 1.4
         """
         if self.keycloak_enabled is False:
             return True
@@ -1037,12 +1044,24 @@ class OpenIDConnect(object):
         return self.keycloak_client_roles
 
     def _get_realm_roles_from_token(self, token):
+        """
+        :param token: access token that contains realm roles
+        :return: Returns a dict with all realm roles from the token
+
+        .. versionadded:: 1.4
+        """
         token = self.keycloakApi.jwt_decode(token)
         if (token is None) or ('realm_access' not in token) or ('roles' not in token["realm_access"]):
             return None
         return token["realm_access"]["roles"]
 
     def _get_client_roles_from_token(self, token):
+        """
+        :param token: access token that contains client roles
+        :return: Returns a dict with all client roles from the token
+
+        .. versionadded:: 1.4
+        """
         token = self.keycloakApi.jwt_decode(token)
         if (token is None) or ('resource_access' not in token):
             return None
@@ -1050,9 +1069,10 @@ class OpenIDConnect(object):
 
     def _get_permissions_from_token(self, rpt_token):
         """
-
         :param rpt_token: requesting party token that contains the permissions
         :return: Returns a dict with all permissions from the token
+
+        .. versionadded:: 1.4
         """
         if self.keycloak_enabled is False:
             return None
@@ -1069,12 +1089,14 @@ class OpenIDConnect(object):
         :param resource: the resource at a specific endpoint
         :type resource: dict
         :return: true if it is an allowed URI, otherwise false
+
+        .. versionadded:: 1.4
         """
         if self.keycloak_enabled is False:
             return True
         logger.debug("Check URIs against the RPT token.")
         has_permission = False
-        is_allowed_uri = False
+        is_uri_allowed = False
 
         permissions = self._get_permissions_from_token(rpt_token)
         if permissions is None:
@@ -1088,21 +1110,31 @@ class OpenIDConnect(object):
             logger.error("Permission was not found in the RPT token.")
             return False
 
-        return self._is_access_granted(is_allowed_uri, resource)
+        return self._is_access_granted(is_uri_allowed, resource)
 
-    def _is_access_granted(self, is_allowed_uri, resource):
+    def _is_access_granted(self, is_uri_allowed, resource):
+        """
+        :type is_uri_allowed: bool
+        :param is_uri_allowed: if is_uri_allowed is True skip verification
+        :type resource: dict
+        :param resource: the resource at a specific endpoint
+
+        .. versionadded:: 1.4
+        """
         if self.keycloak_enabled is False:
             return True
         for uri in resource["uris"]:
-            if is_allowed_uri is False:
-                is_allowed_uri = self._verify_uri(uri)
-        return is_allowed_uri
+            if is_uri_allowed is False:
+                is_uri_allowed = self._verify_uri(uri)
+        return is_uri_allowed
 
     def _verify_uri(self, uri):
         """
         Verify if the request URI follows the uri pattern
         :param uri: the URI pattern
         :return: true if the request path is conform pattern
+
+        .. versionadded:: 1.4
         """
         if self.keycloak_enabled is False:
             return True
@@ -1127,13 +1159,13 @@ class OpenIDConnect(object):
             request['token_type_hint'] = hint
 
         auth_method = current_app.config['OIDC_INTROSPECTION_AUTH_METHOD'] 
-        if (auth_method == 'client_secret_basic'):
+        if auth_method == 'client_secret_basic':
             basic_auth_string = '%s:%s' % (self.client_secrets['client_id'], self.client_secrets['client_secret'])
             basic_auth_bytes = bytearray(basic_auth_string, 'utf-8')
             headers['Authorization'] = 'Basic %s' % b64encode(basic_auth_bytes).decode('utf-8')
-        elif (auth_method == 'bearer'):
+        elif auth_method == 'bearer':
             headers['Authorization'] = 'Bearer %s' % token
-        elif (auth_method == 'client_secret_post'):
+        elif auth_method == 'client_secret_post':
             request['client_id'] = self.client_secrets['client_id']
             if self.client_secrets['client_secret'] is not None:
                 request['client_secret'] = self.client_secrets['client_secret']
