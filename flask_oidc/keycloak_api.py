@@ -3,7 +3,7 @@ import json
 import httplib2
 
 from jose import jwt
-from six.moves.urllib.parse import urlencode
+from urllib.parse import urlencode
 
 # KEYCLOAK URLS
 URL_ISSUER = "{base_url}/realms/{realm-name}"
@@ -43,7 +43,7 @@ class KeycloakAPI(object):
         headers = self._create_authorization_header(token)
         payload = self._create_impersonation_payload(token, subject, target_client)
         try:
-            content, resp = self._execute_impersonation_call(headers, payload)
+            content, resp = self._execute_api_call(headers, payload)
             return self._process_api_response(content, resp)
         except Exception as e:
             logger.error(str(e))
@@ -57,7 +57,7 @@ class KeycloakAPI(object):
                 'audience': target_client,
                 'subject_token': token}
 
-    def _execute_impersonation_call(self, headers, payload):
+    def _execute_api_call(self, headers, payload):
         params_path = {"base_url": self.client_secrets["auth-server-url"], "realm-name": self.client_secrets["realm"]}
         resp, content = httplib2.Http().request(URL_TOKEN.format(**params_path), 'POST', headers=headers,
                                                 body=urlencode(payload))
@@ -73,11 +73,8 @@ class KeycloakAPI(object):
             logger.error("The access token is not available.")
             return False
         headers, payload = self._build_api_call_for_authorization(token)
-        try:
-            content, resp = self._execute_authorization_call(headers, payload)
-            return self._process_api_response(content, resp)
-        except Exception as e:
-            logger.error(str(e))
+        content, resp = self._execute_api_call(headers, payload)
+        return self._process_api_response(content, resp)
 
     def _build_api_call_for_authorization(self, token):
         headers = self._create_authorization_header(token)
@@ -91,12 +88,6 @@ class KeycloakAPI(object):
     def _create_authorization_payload(self):
         return {'grant_type': 'urn:ietf:params:oauth:grant-type:uma-ticket',
                 'audience': self.client_secrets['client_id']}
-
-    def _execute_authorization_call(self, headers, payload):
-        params_path = {"base_url": self.client_secrets["auth-server-url"], "realm-name": self.client_secrets["realm"]}
-        resp, content = httplib2.Http().request(URL_TOKEN.format(**params_path), 'POST', headers=headers,
-                                                body=urlencode(payload))
-        return content, resp
 
     def get_resource_info(self, token, resource_id):
         """
@@ -128,12 +119,9 @@ class KeycloakAPI(object):
         return json.loads(content)
 
     def _build_api_call_to_get_resource_info(self, token):
-        headers = self._create_get_resource_info_header(token)
+        headers = self._create_authorization_header(token)
         payload = {}
         return headers, payload
-
-    def _create_get_resource_info_header(self, token):
-        return {'Authorization': 'Bearer ' + str(token)}
 
     def _execute_get_resource_info_call(self, headers, payload, resource_id):
         params_path = {"base_url": self.client_secrets["auth-server-url"], "realm-name": self.client_secrets["realm"],
