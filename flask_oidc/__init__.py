@@ -36,7 +36,7 @@ import calendar
 import fnmatch
 
 from flask import request, session, redirect, url_for, g, current_app, abort
-from oauth2client.client import flow_from_clientsecrets, OAuth2WebServerFlow,\
+from oauth2client.client import flow_from_clientsecrets, OAuth2WebServerFlow, \
     AccessTokenRefreshError, OAuth2Credentials
 import httplib2
 from itsdangerous import JSONWebSignatureSerializer, BadSignature
@@ -53,6 +53,7 @@ def _json_loads(content):
         content = content.decode('utf-8')
     return json.loads(content)
 
+
 class MemoryCredentials(dict):
     """
     Non-persistent local credentials store.
@@ -66,6 +67,7 @@ class DummySecretsCache(object):
     """
     oauth2client secrets cache
     """
+
     def __init__(self, client_secrets):
         self.client_secrets = client_secrets
 
@@ -88,6 +90,7 @@ class ErrStr(str):
     this ErrStr class, which are basic strings except for their bool() results:
     they return False.
     """
+
     def __nonzero__(self):
         """The py2 method for bool()."""
         return False
@@ -104,10 +107,11 @@ class OpenIDConnect(object):
     """
     The core OpenID Connect client object.
     """
+
     def __init__(self, app=None, credentials_store=None, http=None, time=None,
                  urandom=None):
-        self.credentials_store = credentials_store\
-            if credentials_store is not None\
+        self.credentials_store = credentials_store \
+            if credentials_store is not None \
             else MemoryCredentials()
 
         if http is not None:
@@ -128,9 +132,9 @@ class OpenIDConnect(object):
         # keycloak default init
         self.keycloakApi = None
         self.keycloak_enabled = False
-        self.keycloak_realm_roles = None
-        self.keycloak_client_roles = None
-        self.rpt_token = None
+        self._keycloak_realm_roles = None
+        self._keycloak_client_roles = None
+        self._rpt_token = None
         self.current_uri = None
 
     def init_app(self, app):
@@ -201,9 +205,9 @@ class OpenIDConnect(object):
             self.keycloakApi = KeycloakAPI()
             self.keycloakApi.init_app(keycloak_secrets)
             self.keycloak_enabled = True
-            self.keycloak_realm_roles = None
-            self.keycloak_client_roles = None
-            self.rpt_token = None
+            self._keycloak_realm_roles = None
+            self._keycloak_client_roles = None
+            self._rpt_token = None
 
         try:
             self.credentials_store = app.config['OIDC_CREDENTIALS_STORE']
@@ -371,7 +375,6 @@ class OpenIDConnect(object):
 
         return info
 
-
     def get_cookie_id_token(self):
         """
         .. deprecated:: 1.0
@@ -384,7 +387,7 @@ class OpenIDConnect(object):
     def _get_cookie_id_token(self):
         try:
             id_token_cookie = request.cookies.get(current_app.config[
-                'OIDC_ID_TOKEN_COOKIE_NAME'])
+                                                      'OIDC_ID_TOKEN_COOKIE_NAME'])
             if not id_token_cookie:
                 # Do not error if we were unable to get the cookie.
                 # The user can debug this themselves.
@@ -522,12 +525,15 @@ class OpenIDConnect(object):
         .. versionadded:: 1.0
            This was :func:`check` before.
         """
+
         @wraps(view_func)
         def decorated(*args, **kwargs):
             if g.oidc_id_token is None:
                 return self.redirect_to_auth_server(request.url)
             return view_func(*args, **kwargs)
+
         return decorated
+
     # Backwards compatibility
     check = require_login
     """
@@ -545,6 +551,7 @@ class OpenIDConnect(object):
 
         .. versionadded:: 1.5.0
         """
+
         def wrapper(view_func):
             @wraps(view_func)
             def decorated(*args, **kwargs):
@@ -554,7 +561,9 @@ class OpenIDConnect(object):
                     return view_func(*args, **kwargs)
                 else:
                     return abort(403)
+
             return decorated
+
         return wrapper
 
     def flow_for_request(self):
@@ -689,7 +698,7 @@ class OpenIDConnect(object):
         # additional steps specific to our usage
         if current_app.config['OIDC_GOOGLE_APPS_DOMAIN'] and \
                 id_token.get('hd') != current_app.config[
-                    'OIDC_GOOGLE_APPS_DOMAIN']:
+            'OIDC_GOOGLE_APPS_DOMAIN']:
             logger.error('Invalid google apps domain')
             return False
 
@@ -708,6 +717,7 @@ class OpenIDConnect(object):
         The custom OIDC callback will get the custom state field passed in with
         redirect_to_auth_server.
         """
+
         @wraps(view_func)
         def decorated(*args, **kwargs):
             plainreturn, data = self._process_callback('custom')
@@ -715,6 +725,7 @@ class OpenIDConnect(object):
                 return data
             else:
                 return view_func(data, *args, **kwargs)
+
         self._custom_callback = decorated
         return decorated
 
@@ -756,10 +767,10 @@ class OpenIDConnect(object):
         if not self._is_id_token_valid(id_token):
             logger.debug("Invalid ID token")
             if id_token.get('hd') != current_app.config[
-                    'OIDC_GOOGLE_APPS_DOMAIN']:
+                'OIDC_GOOGLE_APPS_DOMAIN']:
                 return True, self._oidc_error(
                     "You must log in with an account from the {0} domain."
-                    .format(current_app.config['OIDC_GOOGLE_APPS_DOMAIN']),
+                        .format(current_app.config['OIDC_GOOGLE_APPS_DOMAIN']),
                     self.WRONG_GOOGLE_APPS_DOMAIN)
             return True, self._oidc_error()
 
@@ -921,6 +932,7 @@ class OpenIDConnect(object):
                     return self._deny_access(validity, render_errors, 401)
 
             return decorated
+
         return wrapper
 
     def _extract_access_token(self, request):
@@ -930,6 +942,7 @@ class OpenIDConnect(object):
             return request.form['access_token']
         if 'access_token' in request.args:
             return request.args['access_token']
+        return None
 
     def check_authorization(self, require_token=False, scopes_required=None, render_errors=True, validation_func=None):
         """
@@ -943,7 +956,7 @@ class OpenIDConnect(object):
         to be executed. If the caller has no authorization it returns a 403.
 
         Note that this only works if a token introspection url is configured,
-        as that URL will be queried for the valid and scopes of a token.
+        as that URL will be queried for the validity and scopes of a token.
         It is tested with keycloak, not with other IdP's!
 
         :param require_token: Whether a token is required for the current
@@ -961,14 +974,13 @@ class OpenIDConnect(object):
 
         .. versionadded:: 1.4
         """
+
         def wrapper(view_func):
             @wraps(view_func)
             def decorated(*args, **kwargs):
                 if not self.keycloak_enabled:
                     return True
-                func = self._is_authorized
-                if validation_func is not None:
-                    func = validation_func
+                func = validation_func or self._is_authorized
                 self.current_uri = request.script_root + request.path
                 token = self._extract_access_token(request)
 
@@ -983,6 +995,7 @@ class OpenIDConnect(object):
                     return self._deny_access(valid, render_errors, 403)
 
             return decorated
+
         return wrapper
 
     def _deny_access(self, error_description, render_errors, error_code):
@@ -1022,20 +1035,20 @@ class OpenIDConnect(object):
         if validation_func is None:
             validation_func = self._is_uri_allowed
         try:
-            self.rpt_token = self.keycloakApi.authorize(token)
-            if self.rpt_token is None:
+            self._rpt_token = self.keycloakApi.authorize(token)
+            if self._rpt_token is None:
                 logger.debug("No rpt token received - authorization failed!")
                 return False
-            resources = self._get_permissions_from_token(self.rpt_token["access_token"])
-            self.keycloak_realm_roles = self._get_realm_roles_from_token(self.rpt_token["access_token"])
-            self.keycloak_client_roles = self._get_keycloak_client_roles_from_token(self.rpt_token["access_token"])
+            resources = self._get_permissions_from_token(self._rpt_token["access_token"])
             if resources is None:
                 logger.debug("Empty resource set - authorization failed!")
                 return False
+            self._keycloak_realm_roles = self._get_realm_roles_from_token(self._rpt_token["access_token"])
+            self._keycloak_client_roles = self._get_keycloak_client_roles_from_token(self._rpt_token["access_token"])
             for resource_id in resources:
                 resource = self.keycloakApi.get_resource_info(token, resource_id["rsid"])
                 if resource is not None and "uris" in resource and \
-                        validation_func(self.rpt_token["access_token"], resource):
+                        validation_func(self._rpt_token["access_token"], resource):
                     return True
         except Exception as e:
             logger.debug(str(e))
@@ -1043,16 +1056,16 @@ class OpenIDConnect(object):
         return False
 
     @property
-    def get_rpt_token(self):
-        return self.rpt_token
+    def rpt_token(self):
+        return self._rpt_token
 
     @property
-    def get_keycloak_realm_roles(self):
-        return self.keycloak_realm_roles
+    def keycloak_realm_roles(self):
+        return self._keycloak_realm_roles
 
     @property
-    def get_keycloak_client_roles(self):
-        return self.keycloak_client_roles
+    def keycloak_client_roles(self):
+        return self._keycloak_client_roles
 
     def _get_realm_roles_from_token(self, token):
         """
@@ -1158,7 +1171,7 @@ class OpenIDConnect(object):
         if hint != 'none':
             request['token_type_hint'] = hint
 
-        auth_method = current_app.config['OIDC_INTROSPECTION_AUTH_METHOD'] 
+        auth_method = current_app.config['OIDC_INTROSPECTION_AUTH_METHOD']
         if auth_method == 'client_secret_basic':
             basic_auth_string = '%s:%s' % (self.client_secrets['client_id'], self.client_secrets['client_secret'])
             basic_auth_bytes = bytearray(basic_auth_string, 'utf-8')
