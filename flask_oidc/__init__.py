@@ -1142,11 +1142,9 @@ class OpenIDConnect(object):
         if not self.keycloak_enabled:
             return True
         for uri in resource["uris"]:
-            if is_uri_allowed is False:
-                is_uri_allowed = self._verify_uri(uri)
-            else:
-                break
-        return is_uri_allowed
+            if self._verify_uri(uri):
+                return True
+        return False
 
     def _verify_uri(self, uri):
         """

@@ -22,9 +22,9 @@ logger = logging.getLogger(__name__)
 
 
 class KeycloakAPI(object):
-    client_secrets = None
 
     def __init__(self):
+        self.client_secrets = None
         logger.debug("Create a keycloak API object")
 
     def init_app(self, client_secrets):
@@ -42,11 +42,9 @@ class KeycloakAPI(object):
             return False
         headers = self._create_authorization_header(token)
         payload = self._create_impersonation_payload(token, subject, target_client)
-        try:
-            content, resp = self._execute_api_call(headers, payload)
-            return self._process_api_response(content, resp)
-        except Exception as e:
-            logger.error(str(e))
+        content, resp = self._execute_api_call(headers, payload)
+        return self._process_api_response(content, resp)
+
 
     def _create_impersonation_payload(self, token, subject, target_client):
         return {'grant_type': 'urn:ietf:params:oauth:grant-type:token-exchange',
@@ -102,13 +100,8 @@ class KeycloakAPI(object):
             logger.error("The access token is not available.")
             return None
         headers, payload = self._build_api_call_to_get_resource_info(token)
-        try:
-            content, resp = self._execute_get_resource_info_call(headers, payload, resource_id)
-            return self._process_api_response(content, resp)
-        except Exception as e:
-            logger.error(str(e))
-        logger.error("No information about the resource was found.")
-        return None
+        content, resp = self._execute_get_resource_info_call(headers, payload, resource_id)
+        return self._process_api_response(content, resp)
 
     def _process_api_response(self, content, resp):
         if resp.status != 200:
