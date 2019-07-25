@@ -967,7 +967,7 @@ class OpenIDConnect(object):
                 if not self.keycloak_enabled:
                     return True
                 func = self._is_authorized
-                if validation_func is None:
+                if validation_func is not None:
                     func = validation_func
                 self.current_uri = request.script_root + request.path
                 token = self._extract_access_token(request)
@@ -1112,14 +1112,10 @@ class OpenIDConnect(object):
             logger.error("The minimum for the RPT is not satisfied.")
             return False
 
-        for permission in permissions:
-            if permission["rsid"] == resource["_id"]:
-                has_permission = True
-        if has_permission is False:
-            logger.error("Permission was not found in the RPT token.")
-            return False
-
-        return self._is_access_granted(is_uri_allowed, resource)
+        if resource["_id"] in [p["rsid"] for p in permissions]:
+            return self._is_access_granted(is_uri_allowed, resource)
+        logger.error("Permission was not found in the RPT token.")
+        return False
 
     def _is_access_granted(self, is_uri_allowed, resource):
         """
