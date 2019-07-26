@@ -986,10 +986,8 @@ class OpenIDConnect(object):
 
                 valid = self.validate_token(token, scopes_required)
                 authorized = False
-                if valid and require_token:
-                    authorized = func(token)
 
-                if authorized or (not require_token):
+                if (not require_token) or (valid and self._is_authorized(token)):
                     return view_func(*args, **kwargs)
                 else:
                     return self._deny_access(valid, render_errors, 403)
