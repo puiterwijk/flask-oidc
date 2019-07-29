@@ -236,7 +236,7 @@ def test_validate_token_return_false():
         "Expected correct no token error message"
 
 
-def test_authorization_test1():
+def test_authorization_allowed_with_valid_permissions():
     test_app = make_test_app()
     configure_mock_object_version1(test_app)
 
@@ -246,8 +246,6 @@ def test_authorization_test1():
     test_app.oidc.keycloakApi.authorize.assert_called_once_with("query_token")
     assert r.status_code == 200, "Request should be granted (response status was {response.status})".format(response=r)
 
-
-def test_authorization_test2():
     test_app = make_test_app()
     configure_mock_object_version1(test_app)
 
@@ -258,8 +256,19 @@ def test_authorization_test2():
     assert r.status_code == 200, "Request should be granted " \
                                  "(response status was {response.status})".format(response=r)
 
+    test_app = make_test_app()
+    configure_mock_version2(test_app)
 
-def test_authorization_test3_deny():
+    test_client = test_app.test_client()
+
+    r = test_client.get('/test3' + '?access_token=query_token')
+    test_app.oidc.keycloakApi.authorize.assert_called_once_with("query_token")
+
+    assert r.status_code == 200, "Request should be granted " \
+                                 "(response status was {response.status})".format(response=r)
+
+
+def test_authorization_denied_because_of_invalid_permissions():
     test_app = make_test_app()
     configure_mock_object_version1(test_app)
 
@@ -272,32 +281,7 @@ def test_authorization_test3_deny():
                                  "(response status was {response.status})".format(response=r)
 
 
-def test_authorization_test3_grant():
-    test_app = make_test_app()
-    configure_mock_version2(test_app)
-
-    test_client = test_app.test_client()
-
-    r = test_client.get('/test3' + '?access_token=query_token')
-    test_app.oidc.keycloakApi.authorize.assert_called_once_with("query_token")
-
-    assert r.status_code == 200, "Request should be granted " \
-                                 "(response status was {response.status})".format(response=r)
-
-
-def test_callback_method():
-    test_app = make_test_app()
-    configure_mock_version2(test_app)
-
-    test_client = test_app.test_client()
-
-    r = test_client.get('/test4' + '?access_token=query_token')
-    callback_method.assert_called()
-    assert r.status_code == 200, "Request should be granted " \
-                                 "(response status was {response.status})".format(response=r)
-
-
-def test_authorization_unprotected():
+def test_authorization_allowed_because_of_disabling_verification_of_permissions():
     test_app = make_test_app()
     _configure_mock_object(test_app)
 
@@ -309,7 +293,7 @@ def test_authorization_unprotected():
                                  "(response status was {response.status})".format(response=r)
 
 
-def test_invalid_jwt_token():
+def test_authorization_denied_because_of_invalid_jwt_token():
     test_app = make_test_app()
     configure_mock_version3(test_app)
 
@@ -319,6 +303,18 @@ def test_invalid_jwt_token():
     test_app.oidc.keycloakApi.authorize.assert_called_once_with("query_token")
 
     assert r.status_code == 403, "Request should be denied " \
+                                 "(response status was {response.status})".format(response=r)
+
+
+def test_valid_call_of_custom_callback_method():
+    test_app = make_test_app()
+    configure_mock_version2(test_app)
+
+    test_client = test_app.test_client()
+
+    r = test_client.get('/test4' + '?access_token=query_token')
+    callback_method.assert_called()
+    assert r.status_code == 200, "Request should be granted " \
                                  "(response status was {response.status})".format(response=r)
 
 
