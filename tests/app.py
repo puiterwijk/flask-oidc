@@ -147,3 +147,9 @@ def configure_mock_version2(test_app):
     test_app.oidc.keycloakApi.jwt_decode.return_value = decoded_jwt_with_permission_test3
     test_app.oidc.keycloakApi.get_resource_info = Mock()
     test_app.oidc.keycloakApi.get_resource_info.side_effect = [resource_test3]
+
+def configure_mock_version3(test_app):
+    _configure_mock_object(test_app)
+    test_app.oidc.keycloakApi.jwt_decode.return_value = None
+    test_app.oidc.keycloakApi.get_resource_info = Mock()
+    test_app.oidc.keycloakApi.get_resource_info.side_effect = [resource_test3]
