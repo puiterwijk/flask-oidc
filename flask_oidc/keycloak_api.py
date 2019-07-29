@@ -44,7 +44,6 @@ class KeycloakAPI(object):
         content, resp = self._execute_api_call(headers, payload)
         return self._process_api_response(content, resp)
 
-
     def _create_impersonation_payload(self, token, subject, target_client):
         return {'grant_type': 'urn:ietf:params:oauth:grant-type:token-exchange',
                 'client_id': self.client_secrets['client_id'],
