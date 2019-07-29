@@ -1,0 +1,9 @@
+{
+  "realm": "realm",
+  "auth-server-url" : "http://test/auth",
+  "client_id": "MyClient",
+  "client_secret": "MySecret",
+  "grant_type": "client_credentials",
+  "realm_pub_key": "-----BEGIN PUBLIC KEY----- \nIDAQAB\n -----END PUBLIC KEY-----",
+  "token_algorithm": "RS256"
+}

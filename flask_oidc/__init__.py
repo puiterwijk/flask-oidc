@@ -129,13 +129,6 @@ class OpenIDConnect(object):
         if app is not None:
             self.init_app(app)
 
-        # keycloak default init
-        self.keycloakApi = None
-        self.keycloak_enabled = False
-        self._keycloak_realm_roles = None
-        self._keycloak_client_roles = None
-        self._rpt_token = None
-        self.current_uri = None
 
     def init_app(self, app):
         """
@@ -145,7 +138,6 @@ class OpenIDConnect(object):
         :type app: Flask
         """
         secrets = self.load_secrets(app)
-        self.keycloak_enabled = False
 
         self.client_secrets = list(secrets.values())[0]
         secrets_cache = DummySecretsCache(secrets)
@@ -208,6 +200,7 @@ class OpenIDConnect(object):
             self._keycloak_realm_roles = None
             self._keycloak_client_roles = None
             self._rpt_token = None
+            self.current_uri = None
 
         try:
             self.credentials_store = app.config['OIDC_CREDENTIALS_STORE']
@@ -979,15 +972,13 @@ class OpenIDConnect(object):
             @wraps(view_func)
             def decorated(*args, **kwargs):
                 if not self.keycloak_enabled:
-                    return True
+                    return view_func(*args, **kwargs)
                 func = validation_func or self._is_authorized
                 self.current_uri = request.script_root + request.path
                 token = self._extract_access_token(request)
 
                 valid = self.validate_token(token, scopes_required)
-                authorized = False
-
-                if (not require_token) or (valid and self._is_authorized(token)):
+                if (not require_token) or (valid and func(token)):
                     return view_func(*args, **kwargs)
                 else:
                     return self._deny_access(valid, render_errors, 403)
