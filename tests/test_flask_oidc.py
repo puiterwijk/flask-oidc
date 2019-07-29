@@ -3,6 +3,7 @@ import json
 import time
 import codecs
 from base64 import urlsafe_b64encode
+
 try:
     from unittest.mock import Mock, patch, MagicMock
 except ImportError:
@@ -307,6 +308,7 @@ def test_authorization_unprotected():
     assert r.status_code == 200, "Request should be denied " \
                                  "(response status was {response.status})".format(response=r)
 
+
 def test_invalid_jwt_token():
     test_app = make_test_app()
     configure_mock_version3(test_app)
@@ -318,3 +320,21 @@ def test_invalid_jwt_token():
 
     assert r.status_code == 403, "Request should be denied " \
                                  "(response status was {response.status})".format(response=r)
+
+
+def test_verify_uri():
+    test_app = make_test_app()
+    test_app.oidc._set_current_uri("/version/of/assa/.bla")
+    assert test_app.oidc._verify_uri("/version/*/.bla") is True
+
+    test_app.oidc._set_current_uri("/version/of/assa/sss.bla")
+    assert test_app.oidc._verify_uri("/version/*/*.bla") is True
+
+    test_app.oidc._set_current_uri("/version/of/assa/sss.alba")
+    assert test_app.oidc._verify_uri("/version/*/*.bla") is False
+
+    test_app.oidc._set_current_uri("/version/sss.bla")
+    assert test_app.oidc._verify_uri("/version/*/*.bla") is False
+
+    test_app.oidc._set_current_uri("/version/")
+    assert test_app.oidc._verify_uri("/version") is True

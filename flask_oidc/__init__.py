@@ -129,7 +129,6 @@ class OpenIDConnect(object):
         if app is not None:
             self.init_app(app)
 
-
     def init_app(self, app):
         """
         Do setup that requires a Flask app.
@@ -915,7 +914,7 @@ class OpenIDConnect(object):
         def wrapper(view_func):
             @wraps(view_func)
             def decorated(*args, **kwargs):
-                self.current_uri = request.script_root + request.path
+                self._set_current_uri(request.script_root + request.path)
                 token = self._extract_access_token(request)
 
                 validity = self.validate_token(token, scopes_required)
@@ -974,7 +973,7 @@ class OpenIDConnect(object):
                 if not self.keycloak_enabled:
                     return view_func(*args, **kwargs)
                 func = validation_func or self._is_authorized
-                self.current_uri = request.script_root + request.path
+                self._set_current_uri(request.script_root + request.path)
                 token = self._extract_access_token(request)
 
                 valid = self.validate_token(token, scopes_required)
@@ -1043,6 +1042,12 @@ class OpenIDConnect(object):
             logger.debug(str(e))
         logger.debug("Authorization failed!")
         return False
+
+    def _set_current_uri(self, uri):
+        if uri.endswith("/"):
+            self.current_uri = uri[0: 0 + len(uri) - 1]
+        else:
+            self.current_uri = uri
 
     @property
     def rpt_token(self):
