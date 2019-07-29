@@ -1090,6 +1090,8 @@ class OpenIDConnect(object):
         if not self.keycloak_enabled or rpt_token is None:
             return None
         rpt = self.keycloakApi.jwt_decode(rpt_token)
+        if rpt is None:
+            return None
         return rpt.get('authorization', {}).get('permissions', None)
 
     def _is_uri_allowed(self, rpt_token, resource):

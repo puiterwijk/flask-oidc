@@ -12,7 +12,7 @@ from six.moves.urllib.parse import urlsplit, parse_qs, urlencode
 from nose.tools import nottest
 
 from .app import create_app, configure_mock_object_version1, configure_mock_version2, _configure_mock_object, \
-    callback_method
+    callback_method, configure_mock_version3
 
 last_request = None
 with resource_stream(__name__, 'client_secrets.json') as f:
@@ -305,4 +305,16 @@ def test_authorization_unprotected():
     r = test_client.get('/unprotected' + '?access_token=query_token')
     test_app.oidc.keycloakApi.authorize.assert_not_called()
     assert r.status_code == 200, "Request should be denied " \
+                                 "(response status was {response.status})".format(response=r)
+
+def test_invalid_jwt_token():
+    test_app = make_test_app()
+    configure_mock_version3(test_app)
+
+    test_client = test_app.test_client()
+
+    r = test_client.get('/test3' + '?access_token=query_token')
+    test_app.oidc.keycloakApi.authorize.assert_called_once_with("query_token")
+
+    assert r.status_code == 403, "Request should be denied " \
                                  "(response status was {response.status})".format(response=r)
