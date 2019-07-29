@@ -2,3 +2,4 @@ Flask
 itsdangerous
 oauth2client
 six
+python-jose
