@@ -15,7 +15,7 @@ URL_CERTS = "{base_url}/realms/{realm-name}/protocol/openid-connect/certs"
 URL_INTROSPECT = "{base_url}/realms/{realm-name}/protocol/openid-connect/token/introspect"
 URL_ENTITLEMENT = "{base_url}/realms/{realm-name}/authz/entitlement/{entitlement-endpoint}"
 URL_PROTECTION = "{base_url}/realms/{realm-name}/authz/protection/{protection-endpoint}"
-URL_AUTH = "{base_url}/realms/planone/protocol/openid-connect/auth"
+URL_AUTH = "{base_url}/realms/{realm-name}/protocol/openid-connect/auth"
 
 logger = logging.getLogger(__name__)
 
