@@ -1037,7 +1037,7 @@ class OpenIDConnect(object):
             self._keycloak_realm_roles = self._get_realm_roles_from_token(self._rpt_token["access_token"])
             self._keycloak_client_roles = self._get_keycloak_client_roles_from_token(self._rpt_token["access_token"])
             for resource_id in resources:
-                resource = self.keycloakApi.get_resource_info(token, resource_id["rsid"])
+                resource = self.keycloakApi.get_resource_info(resource_id["rsid"])
                 if resource is not None and "uris" in resource and \
                         validation_func(self._rpt_token["access_token"], resource):
                     return True
