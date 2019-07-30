@@ -16,7 +16,8 @@ Features
 - Friendly API
 - Perfect integration into Flask
 - Helper functions to allow resource servers to accept OAuth2 tokens
-
+- Keycloak Integration
+- Support for authorization via Keycloak
 
 Installation
 ------------
@@ -119,6 +120,22 @@ issued by the OpenID Connect provider, just decorate those API functions with
 If you are only using this part of flask-oidc, it is suggested to set the
 configuration option `OIDC_RESOURCE_SERVER_ONLY` (new in 1.0.5).
 
+If you want to control permissions via Keycloak Authorization, just decorate those API
+functions with :meth:`~flask_oidc.OpenIDConnect.check_authorization`::
+
+    @app.route('/api')
+    @oidc.check_authorization()
+    def my_api():
+        return json.dumps('Welcome %s' % g.oidc_token_info['sub'])
+
+You have the same parameters as for accept_token plus the parameter validation_func.
+With this, you can set a callback_method that is used to check if the request is permitted
+instead of the default implementation. The default implementation is asking the keycloak
+server for an rely party token that has all permissions of the current logged in user.
+These permissions are checked against the current uri in the request. Is there a match
+the request is granted with a 200 and the decorated function is called. If not the decorator
+returns a 403. Is there are any errors or problems while validating the decorator also returns
+403.
 
 Registration
 ------------
@@ -270,6 +287,18 @@ This is a list of all settings supported in the current release.
     String that sets the authentication method used when communicating with
     the token_introspection_uri.  Valid values are 'client_secret_post',
     'client_secret_basic', or 'bearer'.  Defaults to 'client_secret_post'.
+
+  OIDC_KEYCLOAK_ENABLED
+    Boolean to enable the keycloak support. You can enable this in applications where
+    you use keycloak as a resource server and want to administrate all permissions via
+    keycloak. (see decorator check_authorization and OIDC_RESOURCE_SERVER_ONLY)
+    Defaults to False.
+
+  OIDC_KEYCLOAK_CLIENT_SECRETS
+    String that sets the configuration file for keycloak. In this file you configure
+    all secrets and special configurations. If you want to see a demo configuration file
+    you can find one in the test directory named "keycloak_authorization.json"
+    Defaults to False.
 
 
 API References

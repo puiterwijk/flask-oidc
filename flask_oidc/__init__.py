@@ -963,6 +963,9 @@ class OpenIDConnect(object):
             as JSON API responses. Set to False to pass the error object back
             unmodified for later rendering.
         :type render_errors: callback(obj) or None
+        :param validation_func: Function that is called instead of the default
+            implementation to check if the request should granted or not.
+        :type validation_func: function or None
 
         .. versionadded:: 1.4
         """
