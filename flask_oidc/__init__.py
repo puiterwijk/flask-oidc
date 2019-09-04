@@ -673,7 +673,6 @@ class OpenIDConnect(object):
             The custom OIDC callback will get the custom state field passed in with
             redirect_to_auth_server.
             """
-
             @wraps(view_func)
             def decorated(*args, **kwargs):
                 plainreturn, data = self._process_callback(statefield)
@@ -681,7 +680,6 @@ class OpenIDConnect(object):
                     return data
                 else:
                     return view_func(data, *args, **kwargs)
-
             self._custom_callback = decorated
             return decorated
         return _custom_callback
