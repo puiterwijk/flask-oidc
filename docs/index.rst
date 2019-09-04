@@ -99,7 +99,7 @@ Example::
         return oidc.redirect_to_auth_server(None, flask.request.values)
 
     @app.route('/custom_callback')
-    @oidc.custom_callback
+    @oidc.custom_callback('custom')
     def callback(data):
         return 'Hello. You submitted %s' % data
 
