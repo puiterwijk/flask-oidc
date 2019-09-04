@@ -91,6 +91,8 @@ To do this, add the decorator `oidc.custom_callback` to your callback function.
 This will get the (json-serializable) custom state that you passed in as
 `customstate` to `oidc.redirect_to_auth_server`.
 Note that to use this, you will need to set `OVERWRITE_REDIRECT_URI`.
+Use parameter `custom` if you want to use custom state, `destination` if you
+want to keep default state settings.
 
 Example::
 
