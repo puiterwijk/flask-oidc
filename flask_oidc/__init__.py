@@ -666,21 +666,25 @@ class OpenIDConnect(object):
 
     WRONG_GOOGLE_APPS_DOMAIN = 'WRONG_GOOGLE_APPS_DOMAIN'
 
-    def custom_callback(self, view_func):
-        """
-        Wrapper function to use a custom callback.
-        The custom OIDC callback will get the custom state field passed in with
-        redirect_to_auth_server.
-        """
-        @wraps(view_func)
-        def decorated(*args, **kwargs):
-            plainreturn, data = self._process_callback('custom')
-            if plainreturn:
-                return data
-            else:
-                return view_func(data, *args, **kwargs)
-        self._custom_callback = decorated
-        return decorated
+    def custom_callback(self, statefield='custom'):
+        def _custom_callback(view_func):
+            """
+            Wrapper function to use a custom callback.
+            The custom OIDC callback will get the custom state field passed in with
+            redirect_to_auth_server.
+            """
+
+            @wraps(view_func)
+            def decorated(*args, **kwargs):
+                plainreturn, data = self._process_callback(statefield)
+                if plainreturn:
+                    return data
+                else:
+                    return view_func(data, *args, **kwargs)
+
+            self._custom_callback = decorated
+            return decorated
+        return _custom_callback
 
     def _oidc_callback(self):
         plainreturn, data = self._process_callback('destination')
