@@ -30,7 +30,7 @@ Install the extension with `pip`::
 How to use
 ----------
 
-To integrate Flask-OpenID into your application you need to create an
+To integrate Flask-OIDC into your application you need to create an
 instance of the :class:`OpenID` object first::
 
     from flask_oidc import OpenIDConnect
