@@ -1,4 +1,4 @@
-# Copyright (c) 2014-2015, Jeremy Ehrhardt <jeremy@bat-country.us>
+# Copyright (c) 2014-2015, Erica Ehrhardt
 # Copyright (c) 2016, Patrick Uiterwijk <patrick@puiterwijk.org>
 # Copyright (c) 2020, Aaron Olson <aaolson817@gmail.com>
 # All rights reserved.
@@ -27,7 +27,7 @@
 from functools import wraps
 import os
 import json
-from base64 import b64encode, urlsafe_b64encode, urlsafe_b64decode
+from base64 import b64encode, b64decode, urlsafe_b64encode, urlsafe_b64decode
 import time
 from copy import copy
 import logging
@@ -35,7 +35,7 @@ from warnings import warn
 import calendar
 
 from six.moves.urllib.parse import urlencode
-from flask import request, session, redirect, url_for, g, current_app
+from flask import request, session, redirect, url_for, g, current_app, abort
 from oauth2client.client import flow_from_clientsecrets, OAuth2WebServerFlow, \
     AccessTokenRefreshError, OAuth2Credentials
 import httplib2
@@ -181,6 +181,7 @@ class OpenIDConnect(object):
         app.config.setdefault('OIDC_USER_INFO_ENABLED', True)
         app.config.setdefault('OIDC_CALLBACK_ROUTE', '/oidc_callback')
         app.config.setdefault('OVERWRITE_REDIRECT_URI', False)
+        app.config.setdefault("OIDC_EXTRA_REQUEST_AUTH_PARAMS", {})
         # Configuration for resource servers
         app.config.setdefault('OIDC_RESOURCE_SERVER_ONLY', False)
         app.config.setdefault('OIDC_RESOURCE_CHECK_AUD', False)
@@ -206,11 +207,12 @@ class OpenIDConnect(object):
             cache=secrets_cache)
         assert isinstance(self.flow, OAuth2WebServerFlow)
 
+        # TODO use configurable salt string instead of hardcoded value to improve security
         # create signers using the Flask secret key
         self.extra_data_serializer = JSONWebSignatureSerializer(
-            app.config['SECRET_KEY'])
-        self.cookie_serializer = TimedJSONWebSignatureSerializer(
-            app.config['SECRET_KEY'])
+            app.config['SECRET_KEY'], salt='flask-oidc-extra-data')
+        self.cookie_serializer = JSONWebSignatureSerializer(
+            app.config['SECRET_KEY'], salt='flask-oidc-cookie')
 
         try:
             self.credentials_store = app.config['OIDC_CREDENTIALS_STORE']
@@ -219,8 +221,11 @@ class OpenIDConnect(object):
 
     def load_secrets(self, app):
         # Load client_secrets.json to pre-initialize some configuration
-        return _json_loads(open(app.config['OIDC_CLIENT_SECRETS'],
-                                'r').read())
+        content = app.config['OIDC_CLIENT_SECRETS']
+        if isinstance(content, dict):
+            return content
+        else:
+            return _json_loads(open(content, 'r').read())
 
     @property
     def user_loggedin(self):
@@ -382,6 +387,9 @@ class OpenIDConnect(object):
         except SignatureExpired:
             logger.debug("Invalid ID token cookie", exc_info=True)
             return None
+        except BadSignature:
+            logger.info("Signature invalid for ID token cookie", exc_info=True)
+            return None
 
     def set_cookie_id_token(self, id_token):
         """
@@ -523,6 +531,26 @@ class OpenIDConnect(object):
        Use :func:`require_login` instead.
     """
 
+    def require_keycloak_role(self, client, role):
+        """
+        Function to check for a KeyCloak client role in JWT access token.
+        This is intended to be replaced with a more generic 'require this value
+        in token or claims' system, at which point backwards compatibility will
+        be added.
+        .. versionadded:: 1.5.0
+        """
+        def wrapper(view_func):
+            @wraps(view_func)
+            def decorated(*args, **kwargs):
+                pre, tkn, post = self.get_access_token().split('.')
+                access_token = json.loads(b64decode(tkn))
+                if role in access_token['resource_access'][client]['roles']:
+                    return view_func(*args, **kwargs)
+                else:
+                    return abort(403)
+            return decorated
+        return wrapper
+
     def flow_for_request(self):
         """
         .. deprecated:: 1.0
@@ -583,6 +611,7 @@ class OpenIDConnect(object):
         extra_params = {
             'state': urlsafe_b64encode(json.dumps(state).encode('utf-8')),
         }
+        extra_params.update(current_app.config['OIDC_EXTRA_REQUEST_AUTH_PARAMS'])
         if current_app.config['OIDC_GOOGLE_APPS_DOMAIN']:
             extra_params['hd'] = current_app.config['OIDC_GOOGLE_APPS_DOMAIN']
         if current_app.config['OIDC_OPENID_REALM']:
@@ -923,7 +952,7 @@ class OpenIDConnect(object):
         if (auth_method == 'client_secret_basic'):
             basic_auth_string = '%s:%s' % (self.client_secrets['client_id'], self.client_secrets['client_secret'])
             basic_auth_bytes = bytearray(basic_auth_string, 'utf-8')
-            headers['Authorization'] = 'Basic %s' % b64encode(basic_auth_bytes)
+            headers['Authorization'] = 'Basic %s' % b64encode(basic_auth_bytes).decode('utf-8')
         elif (auth_method == 'bearer'):
             headers['Authorization'] = 'Bearer %s' % token
         elif (auth_method == 'client_secret_post'):
