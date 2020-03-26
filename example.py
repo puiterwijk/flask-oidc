@@ -1,5 +1,4 @@
 # Copyright (c) 2016, Patrick Uiterwijk <patrick@puiterwijk.org>
-# Copyright (c) 2020, Aaron Olson <aaolson817@gmail.com>
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
