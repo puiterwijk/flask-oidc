@@ -864,14 +864,18 @@ class OpenIDConnect(object):
                 logger.debug('Token missed required scopes')
 
         if (valid_token and has_required_scopes):
+            self.tokens_store[token] = token_info
             g.oidc_token_info = token_info
             return True
 
         if not valid_token:
+            self.bad_tokens_store[token] = token
             return 'Token required but invalid'
         elif not has_required_scopes:
+            self.bad_tokens_store[token] = token
             return 'Token does not have required scopes'
         else:
+            self.bad_tokens_store[token] = token
             return 'Something went wrong checking your token'
 
     def accept_token(self, require_token=False, scopes_required=None, render_errors=True):
@@ -934,8 +938,10 @@ class OpenIDConnect(object):
     def is_expired(self, token):
         current_time = time.time()
         cached_token = self.tokens_store[token]
-        if current_time >= cached_token['exp']:
-            return True
+        if cached_token.get('exp'):
+            if current_time >= cached_token['exp']:
+                return True
+        self.tokens_store.pop(token, False)
         return False
 
     def _get_token_info(self, token):
@@ -967,11 +973,6 @@ class OpenIDConnect(object):
                 self.client_secrets['token_introspection_uri'], 'POST',
                 urlencode(request), headers=headers)
             content = _json_loads(content_string)
-            if resp.status == 200:
-                self.tokens_store[token] = content
-            else:
-                self.bad_tokens_store[token] = token
-
         else:
             # using cached token
             content = self.tokens_store[token]
