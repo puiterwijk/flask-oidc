@@ -940,8 +940,8 @@ class OpenIDConnect(object):
         cached_token = self.tokens_store[token]
         if cached_token.get('exp'):
             if current_time >= cached_token['exp']:
+                self.tokens_store.pop(token, False)
                 return True
-        self.tokens_store.pop(token, False)
         return False
 
     def _get_token_info(self, token):
