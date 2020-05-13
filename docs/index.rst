@@ -107,7 +107,7 @@ Example::
 Resource server
 ---------------
 
-Also, if you have implemented an API that can should be able to accept tokens
+Also, if you have implemented an API that should be able to accept tokens
 issued by the OpenID Connect provider, just decorate those API functions with
 :meth:`~flask_oidc.OpenIDConnect.accept_token`::
 
