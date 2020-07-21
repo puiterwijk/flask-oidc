@@ -15,7 +15,7 @@ setup(
     url='https://github.com/vishnu667/flask-oidc2',
     author='Vishnu Prasad, Patrick Uiterwijk',
     author_email='vishnu667@gmail.com',
-    version='v1.4.2-snapshot',
+    version='1.4.2.dev',
     packages=[
         'flask_oidc',
     ],
