@@ -194,7 +194,6 @@ class OpenIDConnect(object):
             return content
         else:
             return _json_loads(open(content, 'r').read())
-
     @property
     def user_loggedin(self):
         """
