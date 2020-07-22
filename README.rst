@@ -28,12 +28,14 @@ It has been tested with:
 --------------
 
 Project status
+**************
 
-This project is *actually* in active development.
+This project is actively maintained.
 
 --------------
 
 Extension list
+**************
 
 -  Added extra header option to requests ``OIDC_EXTRA_REQUEST_HEADERS``.
    This adds the ability to add a ``Host: <issuer>`` header in
