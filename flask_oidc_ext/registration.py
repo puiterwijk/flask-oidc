@@ -45,30 +45,29 @@ def check_redirect_uris(uris, client_type=None):
 
     .. versionadded:: 1.0
     """
-    if client_type not in [None, 'native', 'web']:
-        raise ValueError('Invalid client type indicator used')
+    if client_type not in [None, "native", "web"]:
+        raise ValueError("Invalid client type indicator used")
 
     if not isinstance(uris, list):
-        raise ValueError('uris needs to be a list of strings')
+        raise ValueError("uris needs to be a list of strings")
 
     if len(uris) < 1:
-        raise ValueError('At least one return URI needs to be provided')
+        raise ValueError("At least one return URI needs to be provided")
 
     for uri in uris:
-        if uri.startswith('https://'):
-            if client_type == 'native':
-                raise ValueError('https url with native client')
-            client_type = 'web'
-        elif uri.startswith('http://localhost'):
-            if client_type == 'web':
-                raise ValueError('http://localhost url with web client')
-            client_type = 'native'
+        if uri.startswith("https://"):
+            if client_type == "native":
+                raise ValueError("https url with native client")
+            client_type = "web"
+        elif uri.startswith("http://localhost"):
+            if client_type == "web":
+                raise ValueError("http://localhost url with web client")
+            client_type = "native"
         else:
-            if (uri.startswith('http://') and 
-                    not uri.startswith('http://localhost')):
-                raise ValueError('http:// url with non-localhost is illegal')
+            if uri.startswith("http://") and not uri.startswith("http://localhost"):
+                raise ValueError("http:// url with non-localhost is illegal")
             else:
-                raise ValueError('Invalid uri provided: %s' % uri)
+                raise ValueError("Invalid uri provided: %s" % uri)
 
     return client_type
 
@@ -80,12 +79,13 @@ class RegistrationError(Exception):
 
     .. versionadded:: 1.0
     """
+
     errorcode = None
     errordescription = None
 
     def __init__(self, response):
-        self.errorcode = response['error']
-        self.errordescription = response.get('error_description')
+        self.errorcode = response["error"]
+        self.errordescription = response.get("error_description")
 
 
 # OpenID Connect Dynamic Client Registration 1.0
@@ -111,34 +111,42 @@ def register_client(provider_info, redirect_uris):
     """
     client_type = check_redirect_uris(redirect_uris)
 
-    submit_info = {'redirect_uris': redirect_uris,
-                   'application_type': client_type,
-                   'token_endpoint_auth_method': 'client_secret_post'}
+    submit_info = {
+        "redirect_uris": redirect_uris,
+        "application_type": client_type,
+        "token_endpoint_auth_method": "client_secret_post",
+    }
 
-    headers = {'Content-type': 'application/json'}
+    headers = {"Content-type": "application/json"}
 
     resp, content = httplib2.Http().request(
-        provider_info['registration_endpoint'], 'POST',
-        json.dumps(submit_info), headers=headers)
+        provider_info["registration_endpoint"],
+        "POST",
+        json.dumps(submit_info),
+        headers=headers,
+    )
 
-    if int(resp['status']) >= 400:
-        raise Exception('Error: the server returned HTTP ' + resp['status'])
+    if int(resp["status"]) >= 400:
+        raise Exception("Error: the server returned HTTP " + resp["status"])
 
     client_info = _json_loads(content)
 
-    if 'error' in client_info:
-        raise Exception('Error occured during registration: %s (%s)'
-                        % (client_info['error'],
-                           client_info.get('error_description')))
+    if "error" in client_info:
+        raise Exception(
+            "Error occured during registration: %s (%s)"
+            % (client_info["error"], client_info.get("error_description"))
+        )
 
-    json_file = {'web': {
-        'client_id': client_info['client_id'],
-        'client_secret': client_info['client_secret'],
-        'auth_uri': provider_info['authorization_endpoint'],
-        'token_uri': provider_info['token_endpoint'],
-        'userinfo_uri': provider_info['userinfo_endpoint'],
-        'redirect_uris': redirect_uris,
-        'issuer': provider_info['issuer'],
-    }}
+    json_file = {
+        "web": {
+            "client_id": client_info["client_id"],
+            "client_secret": client_info["client_secret"],
+            "auth_uri": provider_info["authorization_endpoint"],
+            "token_uri": provider_info["token_endpoint"],
+            "userinfo_uri": provider_info["userinfo_endpoint"],
+            "redirect_uris": redirect_uris,
+            "issuer": provider_info["issuer"],
+        }
+    }
 
     return json_file

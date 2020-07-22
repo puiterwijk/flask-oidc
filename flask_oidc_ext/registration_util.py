@@ -36,62 +36,60 @@ LOG = logging.getLogger("oidc-register")
 
 
 def _parse_args():
-    parser = argparse.ArgumentParser(description='Help register an OpenID '
-                                     'Client')
-    parser.add_argument('provider_url',
-                        help='Base URL to the provider to register at')
-    parser.add_argument('application_url',
-                        help='Base URL to the application')
-    parser.add_argument('--token-introspection-uri',
-                        help='Token introspection URI')
-    parser.add_argument('--output-file', default='client_secrets.json',
-                        help='File to write client info to')
-    parser.add_argument('--debug', action='store_true')
+    parser = argparse.ArgumentParser(description="Help register an OpenID " "Client")
+    parser.add_argument("provider_url", help="Base URL to the provider to register at")
+    parser.add_argument("application_url", help="Base URL to the application")
+    parser.add_argument("--token-introspection-uri", help="Token introspection URI")
+    parser.add_argument(
+        "--output-file",
+        default="client_secrets.json",
+        help="File to write client info to",
+    )
+    parser.add_argument("--debug", action="store_true")
     return parser.parse_args()
 
 
 def main():
     args = _parse_args()
     if os.path.exists(args.output_file):
-        print('Output file exists. Please provide other filename')
+        print("Output file exists. Please provide other filename")
         return 1
 
     if args.debug:
         LOG.setLevel(logging.DEBUG)
 
-    redirect_uris = ['%s/oidc_callback' % args.application_url]
+    redirect_uris = ["%s/oidc_callback" % args.application_url]
     registration.check_redirect_uris(redirect_uris)
     try:
         OP = discovery.discover_OP_information(args.provider_url)
     except Exception as ex:
-        print('Error discovering OP information')
+        print("Error discovering OP information")
         if args.debug:
             print(ex)
             LOG.exception("Error caught when discovering OP information:")
         return 1
     if args.debug:
-        print('Provider info: %s' % OP)
+        print("Provider info: %s" % OP)
     try:
         reg_info = registration.register_client(OP, redirect_uris)
     except Exception as ex:
-        print('Error registering client')
+        print("Error registering client")
         if args.debug:
             print(ex)
             LOG.exception("Error caught when registering the client:")
         return 1
     if args.debug:
-        print('Registration info: %s' % reg_info)
+        print("Registration info: %s" % reg_info)
 
     if args.token_introspection_uri:
-        reg_info['web']['token_introspection_uri'] = \
-            args.token_introspection_uri
+        reg_info["web"]["token_introspection_uri"] = args.token_introspection_uri
 
-    with open(args.output_file, 'w') as outfile:
+    with open(args.output_file, "w") as outfile:
         outfile.write(json.dumps(reg_info))
-        print('Client information file written')
+        print("Client information file written")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     retval = main()
     if retval:
         sys.exit(retval)
