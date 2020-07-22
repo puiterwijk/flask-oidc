@@ -32,7 +32,7 @@ setup(
     author="Erica Ehrhardt, Patrick Uiterwijk",
     author_email="patrick@puiterwijk.org",
     version="1.4.1",
-    packages=["flask_oidc",],
+    packages=["flask_oidc-etc"],
     install_requires=["Flask", "itsdangerous", "oauth2client", "six",],
     tests_require=["nose", "mock"],
     entry_points={
