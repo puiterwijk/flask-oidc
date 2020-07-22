@@ -5,13 +5,14 @@ python:
 - '3.4'
 - '3.5'
 - '3.6'
+- '3.8'
 script: python setup.py test
 deploy:
   provider: pypi
-  user: puiterwijk
+  user: svintit
   password:
     secure: J2e+OVA6s5D14HH3Z551seTG/1Aaj6NUEjmc8FussEVUIobc0h76kG3yY0NAy5lzkIJ9JWTYHiKl3Rx8tteMlHKxh38Awc+bQqng8dJd6pJKO67pa6247LCbpYXlUjYlPwZlbkq+5ms8G5JblBlR6WCDdf4IQLSDBTusLDopcYY=
   on:
     tags: true
-    repo: puiterwijk/flask-oidc
+    repo: svintit/flask-oidc-ext
   distributions: sdist bdist_wheel

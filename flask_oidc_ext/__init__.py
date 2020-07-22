@@ -151,6 +151,7 @@ class OpenIDConnect(object):
         app.config.setdefault('OIDC_CALLBACK_ROUTE', '/oidc_callback')
         app.config.setdefault('OVERWRITE_REDIRECT_URI', False)
         app.config.setdefault("OIDC_EXTRA_REQUEST_AUTH_PARAMS", {})
+        app.config.setdefault("OIDC_EXTRA_REQUEST_HEADERS", {})
         # Configuration for resource servers
         app.config.setdefault('OIDC_RESOURCE_SERVER_ONLY', False)
         app.config.setdefault('OIDC_RESOURCE_CHECK_AUD', False)
@@ -322,11 +323,14 @@ class OpenIDConnect(object):
             resp, content = http.request(self.client_secrets['userinfo_uri'])
         else:
             # We have been manually overriden with an access token
+            headers = current_app.config["OIDC_EXTRA_REQUEST_HEADERS"]
+            headers["Content-type"] = "application/x-www-form-urlencoded"
             resp, content = http.request(
                 self.client_secrets['userinfo_uri'],
                 "POST",
                 body=urlencode({"access_token": access_token}),
-                headers={'Content-Type': 'application/x-www-form-urlencoded'})
+                headers=headers
+            )
 
         logger.debug('Retrieved user info: %s' % content)
         info = _json_loads(content)
@@ -901,13 +905,14 @@ class OpenIDConnect(object):
         # We hardcode to use client_secret_post, because that's what the Google
         # oauth2client library defaults to
         request = {'token': token}
-        headers = {'Content-type': 'application/x-www-form-urlencoded'}
+        headers = current_app.config["OIDC_EXTRA_REQUEST_HEADERS"]
+        headers["Content-type"] = "application/x-www-form-urlencoded"
 
         hint = current_app.config['OIDC_TOKEN_TYPE_HINT']
         if hint != 'none':
             request['token_type_hint'] = hint
 
-        auth_method = current_app.config['OIDC_INTROSPECTION_AUTH_METHOD'] 
+        auth_method = current_app.config['OIDC_INTROSPECTION_AUTH_METHOD']
         if (auth_method == 'client_secret_basic'):
             basic_auth_string = '%s:%s' % (self.client_secrets['client_id'], self.client_secrets['client_secret'])
             basic_auth_bytes = bytearray(basic_auth_string, 'utf-8')
