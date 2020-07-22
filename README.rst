@@ -15,7 +15,7 @@ flask-oidc-ext
 .. |Documentation Status| image:: https://readthedocs.org/projects/flask-oidc/badge/?version=latest
    :target: http://flask-oidc.readthedocs.io/en/latest/?badge=latest
 .. |image2| image:: https://img.shields.io/travis/svintit/flask-oidc-ext.svg?style=flat
-   :target: https://travis-ci.org/svintit/flask-oidc-ext
+   :target: https://travis-ci.com/svintit/flask-oidc-ext
 
 This library should work with any standards compliant OpenID Connect
 provider.
