@@ -36,7 +36,7 @@ setup(
     install_requires=["Flask", "itsdangerous", "oauth2client", "six",],
     tests_require=["nose", "mock"],
     entry_points={
-        "console_scripts": ["oidc-register=flask_oidc.registration_util:main"],
+        "console_scripts": ["oidc-register=flask_oidc_ext.registration_util:main"],
     },
     zip_safe=False,
     classifiers=[

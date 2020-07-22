@@ -25,7 +25,7 @@
 import json
 import httplib2
 
-from flask_oidc import _json_loads
+from flask_oidc_ext import _json_loads
 
 
 def check_redirect_uris(uris, client_type=None):

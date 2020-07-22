@@ -28,8 +28,8 @@ import logging
 import os.path
 import sys
 
-from flask_oidc import discovery
-from flask_oidc import registration
+from flask_oidc_ext import discovery
+from flask_oidc_ext import registration
 
 logging.basicConfig()
 LOG = logging.getLogger("oidc-register")
