@@ -1,5 +1,5 @@
 # flask-oidc-ext
----
+
 [OpenID Connect](https://openid.net/connect/) support for [Flask](http://flask.pocoo.org/).
 [![image](https://img.shields.io/pypi/v/flask-oidc.svg?style=flat)](https://pypi.python.org/pypi/flask-oidc)
 [![image](https://img.shields.io/pypi/dm/flask-oidc.svg?style=flat)](https://pypi.python.org/pypi/flask-oidc)
