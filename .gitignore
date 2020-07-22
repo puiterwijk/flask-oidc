@@ -7,3 +7,4 @@ coverage
 *.egg-info
 dist
 *.pyc
+.eggs/

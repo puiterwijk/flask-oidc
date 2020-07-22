@@ -2,9 +2,10 @@ name: Release
 on:
   push:
     tags: 
-      - v*
+      - '*'
     tags-ignore:
      - '*.dev'
+     - '*.dev*'
      - '*.rc*'
 
 jobs:
