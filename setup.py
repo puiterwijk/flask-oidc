@@ -25,7 +25,7 @@ with io.open(os.path.join(here, "README.rst")) as f:
     readme = f.read()
 
 setup(
-    name="flask-oidc-etc",
+    name="flask-oidc-ext",
     description="OpenID Connect extension for Flask",
     long_description=readme,
     url="https://github.com/puiterwijk/flask-oidc",
