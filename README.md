@@ -18,4 +18,4 @@ This project is *actually* in active development.
 
 ---
 ### Extension list
-  - Added extra header option to requests `OIDC_EXTRA_REQUEST_HEADERS`
+  - Added extra header option to requests `OIDC_EXTRA_REQUEST_HEADERS`. This adds the ability to add a `Host: <issuer>` header in environments where the issuer is no the same DNS as where the request is sent to. E.g `localhost` vs `127.0.0.1`.
