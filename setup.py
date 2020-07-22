@@ -10,17 +10,29 @@ with io.open(os.path.join(here, 'README.rst')) as f:
 
 setup(
     name='flask-oidc2',
+    use_scm_version = {
+        "root": ".",
+        "relative_to": __file__,
+        "local_scheme": "node-and-timestamp"
+    },
     description='OpenID Connect extension for Flask',
     long_description=readme,
     url='https://github.com/vishnu667/flask-oidc2',
+    
     author='Vishnu Prasad, Patrick Uiterwijk',
     author_email='vishnu667@gmail.com',
-    version='1.4.2.dev',
+    project_urls={
+        "Bug Tracker": "https://github.com/vishnu667/flask-oidc2/issues",
+        "Documentation": "https://flask-oidc2.readthedocs.io/",
+        "Source Code": "https://github.com/vishnu667/flask-oidc2/",
+    },
+    setup_requires=['setuptools_scm'],
     packages=[
         'flask_oidc',
     ],
+    
     install_requires=[
-        'Flask',
+        'flask',
         'itsdangerous',
         'oauth2client',
         'six',

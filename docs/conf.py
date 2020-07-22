@@ -14,7 +14,6 @@
 # import sys
 # sys.path.insert(0, os.path.abspath('.'))
 
-
 # -- Project information -----------------------------------------------------
 
 project = 'Flask Oidc 2'
@@ -30,7 +29,7 @@ author = 'Vishnu Prasad'
 extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.doctest',
-    'sphinx.ext.todo',
+    'sphinx.ext.todo'
 ]
 
 master_doc = 'index'
@@ -49,7 +48,11 @@ exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-html_theme = 'classic'
+# html_theme = 'pyramid'
+html_theme = 'sphinx_drove_theme'
+import sphinx_drove_theme
+html_theme_path = [sphinx_drove_theme.get_html_theme_path()]
+
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,

@@ -1,7 +1,7 @@
-Flask-OIDC2
+Flask-Oidc2
 ===========
 
-Flask-OIDC2 is an extension to `Flask`_ that allows you to add `OpenID Connect`_
+Flask-Oidc2 is an extension to `Flask`_ that allows you to add `OpenID Connect`_
 based authentication to your website in a matter of minutes. It depends
 on Flask and `oauth2client`_. You can install the requirements from
 PyPI with `easy_install` or `pip` or download them by hand.
