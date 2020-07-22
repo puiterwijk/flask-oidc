@@ -21,7 +21,7 @@ if not os.path.exists("./docs/_themes/README"):
 
 
 here = os.path.abspath(os.path.dirname(__file__))
-with io.open(os.path.join(here, "README.md")) as f:
+with io.open(os.path.join(here, "README.rst")) as f:
     readme = f.read()
 
 setup(
