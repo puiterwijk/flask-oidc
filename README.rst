@@ -30,4 +30,5 @@ Project status
 This project is *actually* in active development.
 
 Extension list:
+
 * Added extra header option to requests `OIDC_EXTRA_REQUEST_HEADERS`
