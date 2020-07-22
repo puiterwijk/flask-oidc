@@ -1,4 +1,4 @@
-flask-oidc
+flask-oidc-ext
 ==========
 
 `OpenID Connect <https://openid.net/connect/>`_ support for `Flask <http://flask.pocoo.org/>`_.
