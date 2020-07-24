@@ -695,6 +695,12 @@ class OpenIDConnect(object):
         then redirect to the originally requested page.
         """
         # retrieve session and callback variables
+        if 'error' in request.args:
+            error = request.args['error']
+            error_description = request.args['error_description']
+            logger.debug(error + "\n" + error_description)
+            return True, self._oidc_error(error + "\n" + error_description)
+
         try:
             session_csrf_token = session.get('oidc_csrf_token')
 
@@ -705,13 +711,13 @@ class OpenIDConnect(object):
         except (KeyError, ValueError):
             logger.debug("Can't retrieve CSRF token, state, or code",
                          exc_info=True)
-            return True, self._oidc_error()
+            return True, self._oidc_error("Can't retrieve CSRF token, state, or code")
 
         # check callback CSRF token passed to IdP
         # against session CSRF token held by user
         if csrf_token != session_csrf_token:
             logger.debug("CSRF token mismatch")
-            return True, self._oidc_error()
+            return True, self._oidc_error("CSRF token mismatch")
 
         # make a request to IdP to exchange the auth code for OAuth credentials
         flow = self._flow_for_request()
@@ -725,7 +731,7 @@ class OpenIDConnect(object):
                     "You must log in with an account from the {0} domain."
                     .format(current_app.config['OIDC_GOOGLE_APPS_DOMAIN']),
                     self.WRONG_GOOGLE_APPS_DOMAIN)
-            return True, self._oidc_error()
+            return True, self._oidc_error("Invalid ID token")
 
         # store credentials by subject
         # when Google is the IdP, the subject is their G+ account number
@@ -736,7 +742,7 @@ class OpenIDConnect(object):
             response = self.extra_data_serializer.loads(state[statefield])
         except BadSignature:
             logger.error('State field was invalid')
-            return True, self._oidc_error()
+            return True, self._oidc_error('State field was invalid')
 
         # set a persistent signed cookie containing the ID token
         # and redirect to the final destination
