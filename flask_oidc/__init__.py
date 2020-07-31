@@ -356,7 +356,8 @@ class OpenIDConnect(object):
             return self.cookie_serializer.loads(id_token_cookie)
         except SignatureExpired:
             logger.debug("Invalid ID token cookie", exc_info=True)
-            return None
+            g.oidc_id_token = None
+            return self.authenticate_or_redirect()
         except BadSignature:
             logger.info("Signature invalid for ID token cookie", exc_info=True)
             return None
