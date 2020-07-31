@@ -72,7 +72,7 @@ A very basic example client::
     def index():
         if oidc.user_loggedin:
             return 'Welcome %s' % oidc.user_getfield('email')
-        else
+        else:
             return 'Not logged in'
 
     @app.route('/login')
@@ -136,6 +136,7 @@ for information on how to obtain client secrets.
 For example, for Google, you will need to visit `Google API credentials management
 <https://console.developers.google.com/apis/credentials?project=_>`_.
 
+For `MojeID <https://www.mojeid.cz/en/provider/getting-started/>`_, you type ``oidc-register https://mojeid.cz/oidc/ https://your-application``.
 
 Manual client registration
 --------------------------

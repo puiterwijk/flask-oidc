@@ -646,7 +646,9 @@ class OpenIDConnect(object):
             logger.error("id_token issued by non-trusted issuer: %s" % id_token["iss"])
             return False
 
-        if isinstance(id_token["aud"], list):
+        if isinstance(id_token['aud'], list) and len(id_token['aud']) == 1:
+            id_token['aud'] = id_token['aud'][0]
+        if isinstance(id_token['aud'], list):
             # step 3 for audience list
             if self.flow.client_id not in id_token["aud"]:
                 logger.error("We are not a valid audience")
