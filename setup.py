@@ -31,7 +31,7 @@ setup(
     url="https://github.com/svintit/flask-oidc-ext",
     author="Erica Ehrhardt, Patrick Uiterwijk, Traian Svinti",
     author_email="traian.svinti@gmail.com",
-    version="1.4.1",
+    version="1.4.2",
     packages=["flask_oidc_ext"],
     install_requires=["Flask", "itsdangerous", "oauth2client", "six",],
     tests_require=["nose", "mock"],
