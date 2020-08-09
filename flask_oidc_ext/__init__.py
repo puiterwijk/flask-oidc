@@ -599,7 +599,7 @@ class OpenIDConnect(object):
            Use :func:`require_login` instead.
         """
         if not self._custom_callback and customstate:
-            raise ValueError("Custom State is only avilable with a custom " "handler")
+            raise ValueError("Custom State is only avilable with a custom handler")
         if "oidc_csrf_token" not in session:
             csrf_token = urlsafe_b64encode(os.urandom(24)).decode("utf-8")
             session["oidc_csrf_token"] = csrf_token
@@ -861,7 +861,7 @@ class OpenIDConnect(object):
                     valid_audience = clid == aud
 
                 if not valid_audience:
-                    logger.error("Refused token because of invalid " "audience")
+                    logger.error("Refused token because of invalid audience")
                     valid_token = False
 
             if valid_token:
