@@ -42,9 +42,13 @@ from oauth2client.client import (
     OAuth2Credentials,
 )
 import httplib2
-from itsdangerous import JSONWebSignatureSerializer, BadSignature, SignatureExpired
+from itsdangerous import (
+    JSONWebSignatureSerializer,
+    BadSignature,
+    SignatureExpired,
+)
 
-__all__ = ["OpenIDConnect", "MemoryCredentials"]
+__all__ = ["OpenIDConnect", "MemoryCredentials", "MemoryTokens", "MemoryBadTokens"]
 
 logger = logging.getLogger(__name__)
 
@@ -60,6 +64,26 @@ class MemoryCredentials(dict):
     Non-persistent local credentials store.
     Use this if you only have one app server, and don't mind making everyone
     log in again after a restart.
+    """
+
+    pass
+
+
+class MemoryTokens(dict):
+    """
+    Non-persistent local token cache.
+    Use this if you only have one app server, and don't mind having
+    to re-validate everyone's tokens after restart.
+    """
+
+    pass
+
+
+class MemoryBadTokens(dict):
+    """
+    Non-persistent local responses cache for bad tokens.
+    Use this if you only have one app server, and don't mind having
+    to re-validate everyone's tokens after restart.
     """
 
     pass
@@ -111,10 +135,23 @@ class OpenIDConnect(object):
     """
 
     def __init__(
-        self, app=None, credentials_store=None, http=None, time=None, urandom=None
+        self,
+        app=None,
+        credentials_store=None,
+        http=None,
+        tokens_store=None,
+        bad_tokens_store=None,
+        time=None,
+        urandom=None,
     ):
         self.credentials_store = (
             credentials_store if credentials_store is not None else MemoryCredentials()
+        )
+
+        self.tokens_store = tokens_store if tokens_store is not None else MemoryTokens()
+
+        self.bad_tokens_store = (
+            bad_tokens_store if bad_tokens_store is not None else MemoryBadTokens()
         )
 
         if http is not None:
@@ -187,6 +224,7 @@ class OpenIDConnect(object):
         )
         assert isinstance(self.flow, OAuth2WebServerFlow)
 
+        # TODO use configurable salt string instead of hardcoded value to improve security
         # create signers using the Flask secret key
         self.extra_data_serializer = JSONWebSignatureSerializer(
             app.config["SECRET_KEY"], salt="flask-oidc-extra-data"
@@ -533,11 +571,9 @@ class OpenIDConnect(object):
     def require_keycloak_role(self, client, role):
         """
         Function to check for a KeyCloak client role in JWT access token.
-
         This is intended to be replaced with a more generic 'require this value
         in token or claims' system, at which point backwards compatibility will
         be added.
-
         .. versionadded:: 1.5.0
         """
 
@@ -646,9 +682,9 @@ class OpenIDConnect(object):
             logger.error("id_token issued by non-trusted issuer: %s" % id_token["iss"])
             return False
 
-        if isinstance(id_token['aud'], list) and len(id_token['aud']) == 1:
-            id_token['aud'] = id_token['aud'][0]
-        if isinstance(id_token['aud'], list):
+        if isinstance(id_token["aud"], list) and len(id_token["aud"]) == 1:
+            id_token["aud"] = id_token["aud"][0]
+        if isinstance(id_token["aud"], list):
             # step 3 for audience list
             if self.flow.client_id not in id_token["aud"]:
                 logger.error("We are not a valid audience")
@@ -788,7 +824,7 @@ class OpenIDConnect(object):
         return False, response
 
     def _oidc_error(self, message="Not Authorized", code=None):
-        return (message, 401, {"Content-Type": "text/plain",})
+        return message, 401, {"Content-Type": "text/plain",}
 
     def logout(self):
         """
@@ -874,14 +910,18 @@ class OpenIDConnect(object):
                 logger.debug("Token missed required scopes")
 
         if valid_token and has_required_scopes:
+            self.tokens_store[token] = token_info
             g.oidc_token_info = token_info
             return True
 
         if not valid_token:
+            self.bad_tokens_store[token] = token
             return "Token required but invalid"
         elif not has_required_scopes:
+            self.bad_tokens_store[token] = token
             return "Token does not have required scopes"
         else:
+            self.bad_tokens_store[token] = token
             return "Something went wrong checking your token"
 
     def accept_token(
@@ -942,6 +982,21 @@ class OpenIDConnect(object):
 
         return wrapper
 
+    def clear_tokens_store(self):
+        self.tokens_store = {}
+
+    def clear_bad_tokens_store(self):
+        self.bad_tokens_store = {}
+
+    def is_expired(self, token):
+        current_time = time.time()
+        cached_token = self.tokens_store[token]
+        if cached_token.get("exp"):
+            if current_time >= cached_token["exp"]:
+                self.tokens_store.pop(token, False)
+                return True
+        return False
+
     def _get_token_info(self, token):
         # We hardcode to use client_secret_post, because that's what the Google
         # oauth2client library defaults to
@@ -970,11 +1025,24 @@ class OpenIDConnect(object):
             if self.client_secrets["client_secret"] is not None:
                 request["client_secret"] = self.client_secrets["client_secret"]
 
-        resp, content = httplib2.Http().request(
-            self.client_secrets["token_introspection_uri"],
-            "POST",
-            urlencode(request),
-            headers=headers,
-        )
-        # TODO: Cache this reply
-        return _json_loads(content)
+        if self.bad_tokens_store and self.bad_tokens_store.get(token):
+            raise ValueError(
+                "Attempting to authenticate using token that failed validation recently. "
+                "Generate a new token and try again."
+            )
+        if (
+            not self.tokens_store
+            or not self.tokens_store.get(token)
+            or self.is_expired(token)
+        ):
+            resp, content_string = httplib2.Http().request(
+                self.client_secrets["token_introspection_uri"],
+                "POST",
+                urlencode(request),
+                headers=headers,
+            )
+            content = _json_loads(content_string)
+        else:
+            # using cached token
+            content = self.tokens_store[token]
+        return content
