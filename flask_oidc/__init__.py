@@ -193,7 +193,7 @@ class OpenIDConnect(object):
         if isinstance(content, dict):
             return content
         else:
-            with open(content, 'r')  as f:
+            with open(content, 'r') as f:
                 return _json_loads(f.read())
 
     @property
