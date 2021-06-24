@@ -641,8 +641,8 @@ class OpenIDConnect(object):
             return False
 
         # step 10: check iat
-        if id_token['iat'] < (time.time() -
-                              current_app.config['OIDC_CLOCK_SKEW']):
+        if int(id_token['iat']) < (int(time.time()) -
+                              int(current_app.config['OIDC_CLOCK_SKEW'])):
             logger.error('Token issued in the past')
             return False
 
