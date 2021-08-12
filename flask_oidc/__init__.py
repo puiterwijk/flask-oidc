@@ -192,6 +192,8 @@ class OpenIDConnect(object):
         content = app.config['OIDC_CLIENT_SECRETS']
         if isinstance(content, dict):
             return content
+        elif content and content.startswith('{'):
+            return _json_loads(content)
         else:
             return _json_loads(open(content, 'r').read())
 
