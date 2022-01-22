@@ -41,6 +41,9 @@ setup(
     entry_points={
         'console_scripts': ['oidc-register=flask_oidc.registration_util:main'],
     },
+    extras_require={
+        "async": ["flask[async]>=2.0.0"],
+    },
     zip_safe=False,
     classifiers=[
         'Environment :: Web Environment',

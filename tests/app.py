@@ -10,26 +10,26 @@ from flask_oidc import OpenIDConnect
 oidc = None
 
 
-def index():
+async def index():
     return "too many secrets", 200, {
         'Content-Type': 'text/plain; charset=utf-8'
     }
 
-def get_at():
+async def get_at():
     return oidc.get_access_token(), 200, {
         'Content-Type': 'text/plain; charset=utf-8'
     }
 
-def get_rt():
+async def get_rt():
     return oidc.get_refresh_token(), 200, {
         'Content-Type': 'text/plain; charset=utf-8'
     }
 
-def raw_api():
+async def raw_api():
     return {'token': g.oidc_token_info}
 
-def api():
-    return json.dumps(raw_api())
+async def api():
+    return json.dumps(await raw_api())
 
 def create_app(config, oidc_overrides=None):
     global oidc

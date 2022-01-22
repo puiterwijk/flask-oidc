@@ -38,7 +38,8 @@ from flask import request, session, redirect, url_for, g, current_app, abort
 from oauth2client.client import flow_from_clientsecrets, OAuth2WebServerFlow,\
     AccessTokenRefreshError, OAuth2Credentials
 import httplib2
-from itsdangerous import JSONWebSignatureSerializer, BadSignature
+from itsdangerous import JSONWebSignatureSerializer, BadSignature, \
+    SignatureExpired
 
 __all__ = ['OpenIDConnect', 'MemoryCredentials']
 
@@ -49,6 +50,12 @@ def _json_loads(content):
     if not isinstance(content, str):
         content = content.decode('utf-8')
     return json.loads(content)
+
+def _ensure_sync(view_func, *args, **kwargs):
+    if hasattr(current_app, "ensure_sync"):
+        return current_app.ensure_sync(view_func)(*args, **kwargs)
+    else:
+        return view_func(*args, **kwargs)
 
 class MemoryCredentials(dict):
     """
@@ -490,7 +497,7 @@ class OpenIDConnect(object):
         def decorated(*args, **kwargs):
             if g.oidc_id_token is None:
                 return self.redirect_to_auth_server(request.url)
-            return view_func(*args, **kwargs)
+            return _ensure_sync(view_func, *args, **kwargs)
         return decorated
     # Backwards compatibility
     check = require_login
@@ -515,7 +522,7 @@ class OpenIDConnect(object):
                 pre, tkn, post = self.get_access_token().split('.')
                 access_token = json.loads(b64decode(tkn))
                 if role in access_token['resource_access'][client]['roles']:
-                    return view_func(*args, **kwargs)
+                    return _ensure_sync(view_func, *args, **kwargs)
                 else:
                     return abort(403)
             return decorated
@@ -678,7 +685,7 @@ class OpenIDConnect(object):
             if plainreturn:
                 return data
             else:
-                return view_func(data, *args, **kwargs)
+                return _ensure_sync(view_func, *args, **kwargs)
         self._custom_callback = decorated
         return decorated
 
@@ -886,7 +893,7 @@ class OpenIDConnect(object):
 
                 validity = self.validate_token(token, scopes_required)
                 if (validity is True) or (not require_token):
-                    return view_func(*args, **kwargs)
+                    return _ensure_sync(view_func, *args, **kwargs)
                 else:
                     response_body = {'error': 'invalid_token',
                                      'error_description': validity}
