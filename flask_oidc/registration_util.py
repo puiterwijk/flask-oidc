@@ -44,6 +44,8 @@ def _parse_args():
                         help='Base URL to the application')
     parser.add_argument('--token-introspection-uri',
                         help='Token introspection URI')
+    parser.add_argument('--access-token',
+                        help='Initial access token or bearer token')
     parser.add_argument('--output-file', default='client_secrets.json',
                         help='File to write client info to')
     parser.add_argument('--debug', action='store_true')
@@ -71,8 +73,10 @@ def main():
         return 1
     if args.debug:
         print('Provider info: %s' % OP)
+    access_token = args.access_token or None
     try:
-        reg_info = registration.register_client(OP, redirect_uris)
+        reg_info = registration.register_client(OP, redirect_uris,
+                                                access_token=access_token)
     except Exception as ex:
         print('Error registering client')
         if args.debug:
