@@ -33,7 +33,7 @@ setup(
     ],
     install_requires=[
         'Flask',
-        'itsdangerous',
+        'PyJWT',
         'oauth2client',
         'six',
     ],
