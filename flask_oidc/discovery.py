@@ -1,4 +1,5 @@
-# Copyright (c) 2016, Patrick Uiterwijk <patrick@puiterwijk.org>
+# Copyright (c) 2016-2021, Patrick Uiterwijk <patrick@puiterwijk.org>
+# Copyright (c) 2022, Jiashu Chen <jiashuChenGit@outlook.com>
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without

@@ -25,8 +25,8 @@ setup(
     description='OpenID Connect extension for Flask',
     long_description=readme,
     url='https://github.com/puiterwijk/flask-oidc',
-    author='Erica Ehrhardt, Patrick Uiterwijk',
-    author_email='patrick@puiterwijk.org',
+    author='Erica Ehrhardt, Patrick Uiterwijk, Jiashu Chen',
+    author_email='jiashuChenGit@outlook.com',
     version='1.4.0',
     packages=[
         'flask_oidc',
