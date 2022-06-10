@@ -9,9 +9,9 @@
 name: Upload Python Package
 
 on:
+  workflow_dispatch:
   release:
     types: [published]
-  workflow_dispatch:
 
 permissions:
   contents: read
@@ -23,12 +23,22 @@ jobs:
 
     steps:
     - uses: actions/checkout@v3
-    - name: py-package-publish
-      # You may pin to the exact commit or the version.
-      # uses: mariamrf/py-package-publish-action@6f9dbe7625b3eb881550e953f99b28d583add3f9
-      uses: mariamrf/py-package-publish-action@v1.1.0
-      env:
-        TWINE_REPOSITORY_URL: 'https://pypi.pkg.github.com/private-circle/'
-        TWINE_USERNAME: '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'
-        TWINE_PASSWORD: ''
-        
+      with:
+        submodules: true
+    - name: Set up Python
+      uses: actions/setup-python@v3
+      with:
+        python-version: '3.x'
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install build
+    - name: Build package
+      run: python -m build
+    - name: Publish package
+      uses: pypa/gh-action-pypi-publish@27b31702a0e7fc50959f5ad993c78deac1bdfc29
+      with:
+        user: __token__
+        password: ${{ secrets.PYPI_API_TOKEN }}
+        repository_url: https://gitlab.com/api/v4/projects/34957615/packages/pypi/simple
+
