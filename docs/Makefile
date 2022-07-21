@@ -6,6 +6,7 @@ SPHINXOPTS    =
 SPHINXBUILD   = sphinx-build
 PAPER         =
 BUILDDIR      = _build
+THEMESDIR      = _themes
 
 # User-friendly check for sphinx-build
 ifeq ($(shell which $(SPHINXBUILD) >/dev/null 2>&1; echo $$?), 1)
@@ -52,6 +53,10 @@ help:
 .PHONY: clean
 clean:
 	rm -rf $(BUILDDIR)/*
+	rm -rf $(THEMESDIR)/*
+	git clone git://github.com/mitsuhiko/flask-sphinx-themes.git $(THEMESDIR)
+	@echo
+	@echo "Clones Sphinx themes into $(THEMESDIR)"
 
 .PHONY: html
 html:
