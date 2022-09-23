@@ -72,7 +72,7 @@ A very basic example client::
     def index():
         if oidc.user_loggedin:
             return 'Welcome %s' % oidc.user_getfield('email')
-        else
+        else:
             return 'Not logged in'
 
     @app.route('/login')
