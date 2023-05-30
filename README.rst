@@ -27,4 +27,4 @@ It has been tested with:
 Project status
 ==============
 
-This project is in active development.
+This project is not in active development.
