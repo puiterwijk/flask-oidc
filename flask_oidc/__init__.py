@@ -38,12 +38,11 @@ from flask import request, session, redirect, url_for, g, current_app, abort
 from oauth2client.client import flow_from_clientsecrets, OAuth2WebServerFlow,\
     AccessTokenRefreshError, OAuth2Credentials
 import httplib2
-from itsdangerous import JSONWebSignatureSerializer, BadSignature
+import jwt
 
 __all__ = ['OpenIDConnect', 'MemoryCredentials']
 
 logger = logging.getLogger(__name__)
-
 
 def _json_loads(content):
     if not isinstance(content, str):
@@ -176,11 +175,10 @@ class OpenIDConnect(object):
             cache=secrets_cache)
         assert isinstance(self.flow, OAuth2WebServerFlow)
 
-        # create signers using the Flask secret key
-        self.extra_data_serializer = JSONWebSignatureSerializer(
-            app.config['SECRET_KEY'], salt='flask-oidc-extra-data')
-        self.cookie_serializer = JSONWebSignatureSerializer(
-            app.config['SECRET_KEY'], salt='flask-oidc-cookie')
+        self.extra_data_salt = 'flask-oidc-extra-data'
+        self.cookie_salt = 'flask-oidc-cookie'
+        self.extra_data_key = app.config['SECRET_KEY'] + self.extra_data_salt
+        self.cookie_key = app.config['SECRET_KEY'] + self.cookie_salt
 
         try:
             self.credentials_store = app.config['OIDC_CREDENTIALS_STORE']
@@ -353,13 +351,17 @@ class OpenIDConnect(object):
                 # Do not error if we were unable to get the cookie.
                 # The user can debug this themselves.
                 return None
-            return self.cookie_serializer.loads(id_token_cookie)
-        except SignatureExpired:
+            return jwt.decode(id_token_cookie, self.cookie_key, audience=self.client_secrets['client_id'],
+                              algorithms=["HS512"])
+        except jwt.ExpiredSignatureError:
             logger.debug("Invalid ID token cookie", exc_info=True)
             return None
-        except BadSignature:
+        except jwt.InvalidSignatureError:
             logger.info("Signature invalid for ID token cookie", exc_info=True)
             return None
+        except:
+             logger.info("Token cookie JWT error", exc_info=True)
+             return None
 
     def set_cookie_id_token(self, id_token):
         """
@@ -390,7 +392,7 @@ class OpenIDConnect(object):
 
         if getattr(g, 'oidc_id_token_dirty', False):
             if g.oidc_id_token:
-                signed_id_token = self.cookie_serializer.dumps(g.oidc_id_token)
+                signed_id_token = jwt.encode(g.oidc_id_token, self.cookie_key, algorithm="HS512")
                 response.set_cookie(
                     current_app.config['OIDC_ID_TOKEN_COOKIE_NAME'],
                     signed_id_token,
@@ -575,8 +577,7 @@ class OpenIDConnect(object):
         if customstate is not None:
             statefield = 'custom'
             statevalue = customstate
-        state[statefield] = self.extra_data_serializer.dumps(
-            statevalue).decode('utf-8')
+        state[statefield] = jwt.encode({'statevalue': statevalue}, self.extra_data_key, algorithm="HS512")
 
         extra_params = {
             'state': urlsafe_b64encode(json.dumps(state).encode('utf-8')),
@@ -684,6 +685,7 @@ class OpenIDConnect(object):
 
     def _oidc_callback(self):
         plainreturn, data = self._process_callback('destination')
+
         if plainreturn:
             return data
         else:
@@ -731,10 +733,10 @@ class OpenIDConnect(object):
         # when Google is the IdP, the subject is their G+ account number
         self.credentials_store[id_token['sub']] = credentials.to_json()
 
-        # Retrieve the extra statefield data
         try:
-            response = self.extra_data_serializer.loads(state[statefield])
-        except BadSignature:
+            response = jwt.decode(state[statefield], self.extra_data_key, algorithms=["HS512"])
+            response = response['statevalue']
+        except:
             logger.error('State field was invalid')
             return True, self._oidc_error()
 

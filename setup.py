@@ -5,7 +5,7 @@ import sys
 from setuptools import setup
 
 # This check is to make sure we checkout docs/_themes before running sdist
-if not os.path.exists("./docs/_themes/README"):
+if "sdist" in sys.argv and not os.path.exists("./docs/_themes/README"):
     print('Please make sure you have docs/_themes checked out while running setup.py!')
     if os.path.exists('.git'):
         print('You seem to be using a git checkout, please execute the following commands to get the docs/_themes directory:')
@@ -19,6 +19,8 @@ if not os.path.exists("./docs/_themes/README"):
 here = os.path.abspath(os.path.dirname(__file__))
 with io.open(os.path.join(here, 'README.rst')) as f:
     readme = f.read()
+with io.open(os.path.join(here, 'requirements.txt')) as f:
+    requirements = f.read().split()
 
 setup(
     name='flask-oidc',
@@ -30,13 +32,8 @@ setup(
     version='1.4.0',
     packages=[
         'flask_oidc',
-    ],
-    install_requires=[
-        'Flask',
-        'itsdangerous',
-        'oauth2client',
-        'six',
-    ],
+    ],  
+    install_requires=requirements,
     tests_require=['nose', 'mock'],
     entry_points={
         'console_scripts': ['oidc-register=flask_oidc.registration_util:main'],
