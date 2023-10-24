@@ -192,6 +192,8 @@ class OpenIDConnect(object):
         content = app.config['OIDC_CLIENT_SECRETS']
         if isinstance(content, dict):
             return content
+        elif content and content.startswith('{'):
+            return _json_loads(content)
         else:
             return _json_loads(open(content, 'r').read())
 
@@ -641,9 +643,9 @@ class OpenIDConnect(object):
             return False
 
         # step 10: check iat
-        if id_token['iat'] < (time.time() -
-                              current_app.config['OIDC_CLOCK_SKEW']):
-            logger.error('Token issued in the past')
+        if int(id_token['iat']) < (int(time.time()) -
+                              int(current_app.config['OIDC_CLOCK_SKEW'])):
+            logger.error(f"Token issued in the past: {int(id_token['iat'])}, {int(time.time())}, {int(current_app.config['OIDC_CLOCK_SKEW'])}")
             return False
 
         # (not required if using HTTPS?) step 11: check nonce
