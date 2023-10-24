@@ -89,7 +89,7 @@ class RegistrationError(Exception):
 
 
 # OpenID Connect Dynamic Client Registration 1.0
-def register_client(provider_info, redirect_uris):
+def register_client(provider_info, redirect_uris, access_token=None):
     """
     This function registers a new client with the specified OpenID Provider,
     and then returns the regitered client ID and other information.
@@ -100,6 +100,9 @@ def register_client(provider_info, redirect_uris):
     :param redirect_uris: The redirect URIs the application wants to
         register.
     :type redirect_uris: list
+    :param access_token: Bearer token to access the client registration API
+        of the OpenID Provider.
+    :type access_token: str, optional
     :returns: An object containing the information needed to configure the
         actual client code to communicate with the OpenID Provider.
     :rtype: dict
@@ -116,6 +119,8 @@ def register_client(provider_info, redirect_uris):
                    'token_endpoint_auth_method': 'client_secret_post'}
 
     headers = {'Content-type': 'application/json'}
+    if access_token:
+        headers['Authorization'] = 'Bearer {}'.format(access_token)
 
     resp, content = httplib2.Http().request(
         provider_info['registration_endpoint'], 'POST',
