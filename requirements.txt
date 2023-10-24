@@ -1,4 +1,4 @@
 Flask
-itsdangerous
+itsdangerous==2.0.1
 oauth2client
 six
