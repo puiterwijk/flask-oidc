@@ -9,6 +9,7 @@ It has been tested with:
 
 * `Google+ Login <https://developers.google.com/accounts/docs/OAuth2Login>`_
 * `Ipsilon <https://ipsilon-project.org/>`_
+* `MojeID <https://mojeid.cz>`_
 
 
 Project status
